@@ -21,9 +21,9 @@ if noError.search(salida):
 		for i in ns.findall(salida):
 			if i != '':
 				print i
-	elif soa.search(salida):
-		for i in soa.findall(salida):
-			print i
+	#elif soa.search(salida):
+	#	for i in soa.findall(salida):
+	#		print i
 	else:
 		print "Error desconocido."
 
