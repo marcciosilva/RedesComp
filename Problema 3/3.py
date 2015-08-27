@@ -1,42 +1,94 @@
 #!/usr/bin/python
+# -*- coding: UTF-8 -*-
 import subprocess
 import re
+import sys, getopt
 
-dominio = raw_input('Ingrese un nombre de dominio: ')
-RR = raw_input('Tipo de consulta (valores validos: ANY/A/AAAA/SOA/NS/MX/CNAME/TXT/SRV): ')
+def ayuda():
+	texto = ['Este programa toma como parámetros un FQDN y el tipo de RR a consultar', 
+		"y retorna una respuesta autoritativa.",
+		'',
+		"usage:	3.py [options] dominio",
+		"options:",
+		"	-h --help			Muestra este menú",
+		"	-c				Tipo de consulta (valores válidos: ANY/A/AAAA/SOA/NS/MX/CNAME/TXT/SRV)",
+		"					(A por defecto)",
+		"dominio:",
+		"	Una FQDN bien formada"]
+	print '\n'.join(texto)
+	return
 
-if not re.search('ANY|A|AAAA|SOA|NS|MX|CNAME|TXT|SRV', RR):
-	print "\nEl parametro ingresado no es correcto.\nVuelva a intentarlo."
-	exit()
+args = sys.argv[1:]
 
-dig = subprocess.Popen(["dig", dominio, "NS", "+noadditional", "+nostats"], stdout=subprocess.PIPE)
+dominio = ''
+RR = ''
+
+try:
+	opts, args = getopt.getopt(args,"hc:",["help","RR="])
+except getopt.GetoptError:
+	ayuda()
+	sys.exit(2)
+for opt, arg in opts:
+	if opt in ('-h','--help'):
+		print ayuda()
+		sys.exit()
+	elif opt in ('-c'):
+		RR = arg
+		
+if not RR:
+	RR = 'A'
+else:
+	if not re.search('ANY|A|AAAA|SOA|NS|MX|CNAME|TXT|SRV', RR):
+		sys.exit("El parametro ingresado no es correcto.\nVuelva a intentarlo.")
+
+if args:
+	dominio = args[0]
+else:
+	ayuda()
+	sys.exit()
+
+dig = subprocess.Popen(["./2.py", dominio], stdout=subprocess.PIPE)
 salida = dig.communicate()[0]
 
+if dig.returncode:
+	print salida
+	sys.exit(1)
+
+servidores = salida.splitlines()
+servidor = servidores[2]
+authorityCmd = "@" + servidor
+dig = subprocess.Popen(["dig", authorityCmd, dominio, RR, "+noall", "+answer", "+comments"], stdout=subprocess.PIPE)
+salida = dig.communicate()[0]
+
+#print "La respuesta obtenida del servidor autoritativo " + servidor + "es la siguiente:\n"
+#temp = salida.splitlines()[4:]
+#print '\n'.join(temp)
+#sys.exit()
 notADomain = re.compile('NXDOMAIN')
 noError = re.compile('NOERROR')
+answer = re.compile('ANSWER SECTION')
 
-if noError.search(salida):
-	ns = re.compile('\s+NS\s+([\w|\.]*)')
-
-	if ns.search(salida):
-		for i in ns.findall(salida):
-			if i != '':
-				authority = i
-				break
+if notADomain.search(salida):
+		print "El dominio ingresado no existe."
+		print "status:NXDOMAIN"
+		sys.exit(1)
+elif noError.search(salida):
+	if answer.search(salida):
+		#print "Los servidores de nombre autoritativos para " + dominio + " son:\n"
+		regex = '\s+' + RR + '\s+(?:\d+\s+)*([\w|\.|:]*)'
+		ns = re.compile(regex)
+		if ns.search(salida):
+			for i in ns.findall(salida):
+				if i != '':
+					print i
+					
+		#soa = re.compile('\s+SOA\s+([\w|\.]*)')
+		#elif soa.search(salida):
+		#	for i in soa.findall(salida):
+		#		print i
 	else:
-		print "Error desconocido."
-
-elif notADomain.search(salida):
-	print "\nEl dominio ingresado no existe."
-	print "status:NXDOMAIN"
-	
+		#print "No se obtuvo respuesta.\nVuelva a intentarlo con otro dominio."
+		sys.exit("No se pudo encontrar un servidor autoritativo.")
 else:
-	print "\nError desconocido.\nVuelva a intentarlo con otro dominio."
-	
-authorityCmd = "@" + authority
-dig = subprocess.Popen(["dig", authorityCmd, dominio, RR, "+noall", "+answer"], stdout=subprocess.PIPE)
-salida = dig.communicate()[0]
-
-#temp = re.findall('\d+\s+([\w|\.]*)', salida)
-print "\nLa respuesta obtenida del servidor autoritativo " + authority + "es la siguiente:\n"
-print salida
+	print "Error desconocido.\nVuelva a intentarlo con otro dominio."
+	sys.exit(1)

@@ -44,8 +44,10 @@ for i in authorities:
 	for i in ipsAux:
 		if not i in ips:
 			ips = ips + [i]
-for i in ips:
-	print i
+			
+if testing:
+	for i in ips:
+		print i
 
 if IP in ips:
 	print "HURRAY"
