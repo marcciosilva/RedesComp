@@ -3,6 +3,7 @@
 import subprocess
 import re
 import sys, getopt
+from time import sleep
 
 def ayuda():
 	texto = ['Este programa toma como parámetros un FQDN y el tipo de RR a consultar', 
@@ -55,15 +56,25 @@ if dig.returncode:
 	sys.exit(1)
 
 servidores = salida.splitlines()
-servidor = servidores[2]
-authorityCmd = "@" + servidor
-dig = subprocess.Popen(["dig", authorityCmd, dominio, RR, "+noall", "+answer", "+comments"], stdout=subprocess.PIPE)
+servidores = servidores[2:]
+
+encontre = False
+for s in servidores:
+	authorityCmd = "@" + s
+	dig = subprocess.Popen(["dig", authorityCmd, dominio, RR, "+noall", "+answer", "+comments"], stdout=subprocess.PIPE)
+	sleep(1.0)
+	if dig.poll() is None:
+		dig.terminate()
+	else:
+		encontre = True
+		break
+
+if not encontre:
+	print "No se obtuvo respuesta."
+	sys.exit(1)
+	
 salida = dig.communicate()[0]
 
-#print "La respuesta obtenida del servidor autoritativo " + servidor + "es la siguiente:\n"
-#temp = salida.splitlines()[4:]
-#print '\n'.join(temp)
-#sys.exit()
 notADomain = re.compile('NXDOMAIN')
 noError = re.compile('NOERROR')
 answer = re.compile('ANSWER SECTION')

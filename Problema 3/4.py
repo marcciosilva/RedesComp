@@ -1,55 +1,82 @@
 #!/usr/bin/python
+# -*- coding: UTF-8 -*-
 import subprocess
 import re
-
+import sys, getopt
+from time import sleep
 testing = 0
+
+def ayuda():
+	texto = ['Este programa toma como parámetros un nombre de dominio y una dirección IP.', 
+		"Retorna con exit code (0) si esa IP es pertenece a un servidor de correo del dominio ingresado.",
+		'',
+		"usage:	4.py [options] IP dominio",
+		"options:",
+		"	-h --help			Muestra este menú",
+		"IP:",
+		"	Ej: 123.22.21.0",
+		"dominio:",
+		"	Una FQDN bien formada"]
+	print '\n'.join(texto)
+	return
+
+args = sys.argv[1:]
+
+dominio = ''
+IP = ''
+
+
 if testing:
 	dominio = "google.com"
 	IP = "74.125.141.26"
 else:
-	dominio = raw_input('Ingrese un nombre de dominio: ')
-	IP = raw_input('Ingrese una direccion IP: ')
+	try:
+		opts, args = getopt.getopt(args,"h",["help"])
+	except getopt.GetoptError:
+		ayuda()
+		sys.exit(2)
+	for opt, arg in opts:
+		if opt in ('-h','--help'):
+			print ayuda()
+			sys.exit()
+	if len(args) >= 2:
+		IP = args[0]
+		dominio = args[1]
+	else:
+		ayuda()
+		sys.exit()
 
-dig = subprocess.Popen(["dig", dominio, "NS", "+noadditional", "+nostats"], stdout=subprocess.PIPE)
+dig = subprocess.Popen(["./2.py", dominio], stdout=subprocess.PIPE)
 salida = dig.communicate()[0]
 
-notADomain = re.compile('NXDOMAIN')
-noError = re.compile('NOERROR')
+if dig.returncode:
+	print salida
+	sys.exit(1)
 
-if noError.search(salida):
-	ns = re.compile('\s+NS\s+([\w|\.]*)')
+servidoresAuth = salida.splitlines()
+servidoresAuth = servidoresAuth[2:]
 
-	if ns.search(salida):
-		authorities = []
-		for i in ns.findall(salida):
-			if i != '':
-				authorities = authorities + [i]
-	else:
-		print "Error desconocido."
-
-elif notADomain.search(salida):
-	print "\nEl dominio ingresado no existe."
-	print "status:NXDOMAIN"
-	
-else:
-	print "\nError desconocido.\nVuelva a intentarlo con otro dominio."
-	
+encontre = False
 ips = []
-for i in authorities:
-	authorityCmd = "@" + i
+for s in servidoresAuth:
+	authorityCmd = "@" + s
 	dig = subprocess.Popen(["dig", authorityCmd, dominio, "MX", "+noall", "+additional"], stdout=subprocess.PIPE)
-	salida = dig.communicate()[0]
+	sleep(1.0)
+	if dig.poll() is None:
+		dig.terminate()
+	else:
+		salida = dig.communicate()[0]
+		ipsAux = re.findall('(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})', salida)
+		for i in ipsAux:
+			if not i in ips:
+				ips = ips + [i]
 
-	ipsAux = re.findall('(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})', salida)
-	for i in ipsAux:
-		if not i in ips:
-			ips = ips + [i]
-			
 if testing:
 	for i in ips:
 		print i
 
 if IP in ips:
-	print "HURRAY"
+	print "IP VERIFICADA"
+	sys.exit()
 else:
-	print "noooRRAY"
+	sys.exit("IP NO VERIFICADA")
