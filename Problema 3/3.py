@@ -28,7 +28,7 @@ try:
 	opts, args = getopt.getopt(args,"hc:",["help","RR="])
 except getopt.GetoptError:
 	ayuda()
-	sys.exit(2)
+	sys.exit(1)
 for opt, arg in opts:
 	if opt in ('-h','--help'):
 		print ayuda()

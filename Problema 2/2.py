@@ -1,5 +1,3 @@
-__author__ = 'marccio'
-
 import pexpect
 import re
 
