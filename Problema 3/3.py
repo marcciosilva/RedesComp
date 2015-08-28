@@ -12,7 +12,7 @@ def ayuda():
 		"usage:	3.py [options] dominio",
 		"options:",
 		"	-h --help			Muestra este menú",
-		"	-c				Tipo de consulta (valores válidos: ANY/A/AAAA/SOA/NS/MX/CNAME/TXT/SRV)",
+		"	-c				Tipo de consulta (valores válidos: A|AAAA|SOA|NS|MX|CNAME|TXT|SRV)",
 		"					(A por defecto)",
 		"dominio:",
 		"	Una FQDN bien formada"]
@@ -37,7 +37,7 @@ for opt, arg in opts:
 		RR = arg
 		
 if not RR:
-	RR = 'A'
+	RR = 'ANY'
 else:
 	if not re.search('ANY|A|AAAA|SOA|NS|MX|CNAME|TXT|SRV', RR):
 		sys.exit("El parametro ingresado no es correcto.\nVuelva a intentarlo.")
@@ -55,11 +55,11 @@ if dig.returncode:
 	print salida
 	sys.exit(1)
 
-servidores = salida.splitlines()
-servidores = servidores[2:]
+servidoresAuth = salida.splitlines()
+servidoresAuth = servidoresAuth[2:]
 
 encontre = False
-for s in servidores:
+for s in servidoresAuth:
 	authorityCmd = "@" + s
 	dig = subprocess.Popen(["dig", authorityCmd, dominio, RR, "+noall", "+answer", "+comments"], stdout=subprocess.PIPE)
 	sleep(1.0)
@@ -84,19 +84,30 @@ if notADomain.search(salida):
 		print "status:NXDOMAIN"
 		sys.exit(1)
 elif noError.search(salida):
+	if RR == 'ANY':
+		rr = ['A','AAAA','NS','SOA','MX','TXT']
+	else:
+		rr = [RR]
 	if answer.search(salida):
-		#print "Los servidores de nombre autoritativos para " + dominio + " son:\n"
-		regex = '\s+' + RR + '\s+(?:\d+\s+)*([\w|\.|:]*)'
-		ns = re.compile(regex)
-		if ns.search(salida):
-			for i in ns.findall(salida):
-				if i != '':
-					print i
-					
-		#soa = re.compile('\s+SOA\s+([\w|\.]*)')
-		#elif soa.search(salida):
-		#	for i in soa.findall(salida):
-		#		print i
+		for x in rr:
+			if x in ('A','AAAA'):
+				r = '\s+' + x + '\s+([\d|\.|\:|\w]*)'
+			elif x in ('NS','SOA'):
+				r = '\s+' + x + '\s+([\w|\.]*)'
+			elif x in ('MX'):
+				r = '\s+' + x + '\s+\d+\s+([\w|\.]*)'
+			else:
+				r = '\s+' + x + '\s+(".*")'
+			rc = re.compile(r)
+			if rc.search(salida):
+				for i in rc.findall(salida):
+					if i != '':
+						print i
+						
+			#soa = re.compile('\s+SOA\s+([\w|\.]*)')
+			#elif soa.search(salida):
+			#	for i in soa.findall(salida):
+			#		print i
 	else:
 		#print "No se obtuvo respuesta.\nVuelva a intentarlo con otro dominio."
 		sys.exit("No se pudo encontrar un servidor autoritativo.")

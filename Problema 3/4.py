@@ -61,7 +61,7 @@ ips = []
 for s in servidoresAuth:
 	authorityCmd = "@" + s
 	dig = subprocess.Popen(["dig", authorityCmd, dominio, "MX", "+noall", "+additional"], stdout=subprocess.PIPE)
-	sleep(1.0)
+	sleep(0.5)
 	if dig.poll() is None:
 		dig.terminate()
 	else:
@@ -76,7 +76,8 @@ if testing:
 		print i
 
 if IP in ips:
-	print "IP VERIFICADA"
+	print "0"
 	sys.exit()
 else:
-	sys.exit("IP NO VERIFICADA")
+	print "-1"
+	sys.exit(-1)
