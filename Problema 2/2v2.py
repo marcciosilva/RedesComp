@@ -57,6 +57,10 @@ for opt, arg in opts:
 		else:
 			ayuda()
 			sys.exit(1)
+			
+if not argumento:
+	ayuda()
+	sys.exit(1)
 		
 traceroute = subprocess.Popen(["./traceroute", argumento], stdout=subprocess.PIPE)
 traceroute.wait()
@@ -79,7 +83,7 @@ h3 = re.compile(hitx3)
 h2h = re.compile(hitx2+hit)
 hh2 = re.compile(hit+hitx2)
 hhh = re.compile(hit+hit+hit)
-hhm = re.compile(hitx2+miss)
+hhm = re.compile(hit+hit+miss)
 h2m = re.compile(hitx2+miss)
 hmh = re.compile(hit+miss+hit)
 mhh = re.compile(miss+hit+hit)
