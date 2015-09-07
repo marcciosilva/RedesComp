@@ -232,7 +232,6 @@ prom_aux = promedios
 diff = []
 for i in range(1,hops):
 	if prom_aux[i] == -1:
-		print "entro"
 		prom_aux[i] = prom_aux[i-1]
 		diff.append(-1)
 	else: 

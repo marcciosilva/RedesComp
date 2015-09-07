@@ -13,7 +13,7 @@ def ayuda():
 		"options:",
 		"	-h --help			Muestra este menú",
 		"	-c				Tipo de consulta (valores válidos: A|AAAA|SOA|NS|MX|CNAME|TXT|SRV)",
-		"					(A por defecto)",
+		"					(ANY por defecto)",
 		"dominio:",
 		"	Una FQDN bien formada"]
 	print '\n'.join(texto)
@@ -70,7 +70,7 @@ for s in servidoresAuth:
 		break
 
 if not encontre:
-	print "No se obtuvo respuesta."
+	print "No se obtuvo respuesta de los servidores autoritativos."
 	sys.exit(1)
 	
 salida = dig.communicate()[0]
@@ -109,8 +109,9 @@ elif noError.search(salida):
 			#	for i in soa.findall(salida):
 			#		print i
 	else:
-		#print "No se obtuvo respuesta.\nVuelva a intentarlo con otro dominio."
-		sys.exit("No se pudo encontrar un servidor autoritativo.")
+		print "No se obtuvo respuesta para la consulta realizada."
+		print "Se consultó el servidor autoritativo " + s
+		sys.exit(1)
 else:
 	print "Error desconocido.\nVuelva a intentarlo con otro dominio."
 	sys.exit(1)
