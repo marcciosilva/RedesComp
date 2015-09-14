@@ -1,12 +1,13 @@
-# redes-obligatorio-1
-Redes de Computadoras - Obligatorio 1 - 2015
-
-Entrega: 30 Agosto 2015
-
-Informe: https://www.overleaf.com/3112389bykwzs
+# RedesComp
+Redes de Computadoras - 2015
 
 Gastón Haro - 4.012.543-6 - harogaston@gmail.com
 
 Ignacio Prandi - 4.473.654-2 nachoprbd@gmail.com
 
 Marccio Silva - 4.547.599-3 - marcciosilva@gmail.com
+
+Informes
+
+Obligatorio 1 - https://www.overleaf.com/3112389bykwzs
+Obligatorio 2 - https://www.overleaf.com/3248116xrzwzf
