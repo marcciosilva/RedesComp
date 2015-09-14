@@ -131,8 +131,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                 InetAddress IPAddress = InetAddress.getByName(fieldHost.getText());
                 byte[] sendData = new byte[1024];
                 byte[] receiveData = new byte[1024];
-                String apodo = fieldApodo.getText();
-                sendData = apodo.getBytes();
+                String mensajeAEnviar = "LOGIN <" + fieldApodo.getText() + "><CR>";
+                sendData = mensajeAEnviar.getBytes();
                 // creo paquete de envío y lo envío
                 DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress,
                         Integer.parseInt(fieldPort.getText()));

@@ -6,17 +6,26 @@
 // Description : Hello World in C++, Ansi-style
 //============================================================================
 
+// STL
+
+#include <set>
+
+// Expresiones regulares
+
+#include <regex>
+
 #include <sys/socket.h>
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>	/* needed for memset */
-#include <sys/socket.h>
 #include <netinet/in.h>	/* needed for sockaddr_in */
 #include <netdb.h>
 #include <arpa/inet.h>
 #define PORT 54321
 #define BUFSIZE 1024
+
+#include "Cliente.h"
 
 using namespace std;
 
@@ -28,6 +37,8 @@ int main(int argc, char **argv) {
 	int fd; /* our socket */
 	int msgcnt = 0; /* count # of messages we received */
 	char buf[BUFSIZE]; /* receive buffer */
+
+	set<Cliente*> * clientes = new set<Cliente*>; //acá almaceno la información de cada cliente nuevo
 
 	/* create a UDP socket */
 
@@ -50,19 +61,28 @@ int main(int argc, char **argv) {
 		perror("bind failed");
 		return 0;
 	}
-
 	/* now loop, receiving data and printing what we received */
 	for (;;) {
-		printf("waiting on port %d\n", PORT);
+		printf("Esperando en puerto %d\n", PORT, "...");
 		recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *) &remaddr,
 				&addrlen);
 		if (recvlen > 0) {
 			buf[recvlen] = 0;
-			printf("received message: \"%s\" (%d bytes)\n", buf, recvlen);
+			printf("Mensaje recibido: \"%s\" (%d bytes)\n", buf, recvlen);
 		} else
-			printf("uh oh - something went wrong!\n");
+			printf("El mensaje estaba vacío\n");
 		sprintf(buf, "ack %d", msgcnt++);
+		//testeo de regex
+		regex regex("^LOGIN\\s+<(.*)><CR>$");
+		smatch m;
+		string str(buf);
+		cout << regex_match(str, m, regex) << endl;
+		for (auto result : m) {
+			std::cout << result << std::endl;
+		}
+
 		printf("sending response \"%s\"\n", buf);
+		//envío respuesta
 		if (sendto(fd, buf, strlen(buf), 0, (struct sockaddr *) &remaddr,
 				addrlen) < 0)
 			perror("sendto");
