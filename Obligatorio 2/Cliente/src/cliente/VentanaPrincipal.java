@@ -5,6 +5,11 @@
  */
 package cliente;
 
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import javax.swing.JOptionPane;
+
 /**
  *
  * @author marccio
@@ -16,6 +21,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
      */
     public VentanaPrincipal() {
         initComponents();
+        botonDesconectar.setEnabled(false);
+        areaChat.setEditable(false);
     }
 
     /**
@@ -51,6 +58,12 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         jScrollPane1.setViewportView(areaChat);
 
         getContentPane().add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(520, 40, 437, 622));
+
+        fieldInput.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyReleased(java.awt.event.KeyEvent evt) {
+                fieldInputKeyReleased(evt);
+            }
+        });
         getContentPane().add(fieldInput, new org.netbeans.lib.awtextra.AbsoluteConstraints(520, 680, 437, -1));
         getContentPane().add(fieldHost, new org.netbeans.lib.awtextra.AbsoluteConstraints(199, 78, 186, -1));
         getContentPane().add(fieldApodo, new org.netbeans.lib.awtextra.AbsoluteConstraints(199, 363, 186, -1));
@@ -69,6 +82,11 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         getContentPane().add(botonDesconectar, new org.netbeans.lib.awtextra.AbsoluteConstraints(285, 483, 185, 134));
 
         botonConectar.setText("Connect");
+        botonConectar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                botonConectarActionPerformed(evt);
+            }
+        });
         getContentPane().add(botonConectar, new org.netbeans.lib.awtextra.AbsoluteConstraints(54, 483, 185, 134));
 
         iconoStatus.setPreferredSize(new java.awt.Dimension(30, 30));
@@ -91,6 +109,57 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
+
+    private void fieldInputKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_fieldInputKeyReleased
+        if (evt.getKeyCode() == java.awt.event.KeyEvent.VK_ENTER) {
+            System.out.println("Tocaste ENTER");
+            fieldInput.setText("");
+        }
+    }//GEN-LAST:event_fieldInputKeyReleased
+
+    private void botonConectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonConectarActionPerformed
+        //mando un paquete UDP con mi apodo para registrarme en el servidor
+        if (fieldHost.getText().equals("")) {
+            JOptionPane.showMessageDialog(this, "Ingrese la IP del Host", "Error", JOptionPane.ERROR_MESSAGE);
+        } else if (fieldPort.getText().equals("")) {
+            JOptionPane.showMessageDialog(this, "Ingrese un número de Puerto", "Error", JOptionPane.ERROR_MESSAGE);
+        } else if (fieldApodo.getText().equals("")) {
+            JOptionPane.showMessageDialog(this, "Ingrese un Apodo", "Error", JOptionPane.ERROR_MESSAGE);
+        } else { //hay datos en todos los campos
+            try {
+                DatagramSocket clientSocket = new DatagramSocket();
+                InetAddress IPAddress = InetAddress.getByName(fieldHost.getText());
+                byte[] sendData = new byte[1024];
+                byte[] receiveData = new byte[1024];
+                String apodo = fieldApodo.getText();
+                sendData = apodo.getBytes();
+                // creo paquete de envío y lo envío
+                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress,
+                        Integer.parseInt(fieldPort.getText()));
+                clientSocket.send(sendPacket);
+                // creo paquete de recepción y lo recibo (con timeout de 5 segundos)
+                DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+                clientSocket.setSoTimeout(5000);
+                clientSocket.receive(receivePacket);
+                //actualizo ventana de chat
+                String mensaje = new String(receivePacket.getData());
+                String ventanaChat = areaChat.getText();
+                ventanaChat = ventanaChat.concat("\n" + mensaje);
+                areaChat.setText(ventanaChat);
+                System.out.println(mensaje); // consola
+                //cierro socket
+                clientSocket.close();
+                botonConectar.setEnabled(false);
+                botonDesconectar.setEnabled(true);
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this,
+                        "No se pudo realizar la conexión \n" + "Motivo: " + e.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                System.out.println(e.getCause().toString());
+            }
+        }
+
+    }//GEN-LAST:event_botonConectarActionPerformed
 
     /**
      * @param args the command line arguments
