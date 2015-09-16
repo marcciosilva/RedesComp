@@ -169,7 +169,7 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 		// Verificar Apodo
 		boolean okApodo = strSinEspacios(apodo);
 
-		// Mandar datagrama y esperar por conección exitosa
+		// Mandar datagrama y esperar por conexión exitosa
 		if (okIP && okPort && okApodo) {
 
 			// Intento abrir un DatagramSocket
@@ -180,7 +180,7 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 				JOptionPane.showMessageDialog(this, "Error! No se pudo abrir un puerto para la conección", "Cliente", JOptionPane.INFORMATION_MESSAGE);
 			}
 
-			// Construyo el paquete y lo envío "vacío" porque es solo para poder establecer la conección. El número de puerto 
+			// Construyo el paquete y lo envío "vacío" porque es solo para poder establecer la conexión. El número de puerto 
 			// del cliente y la IP van incluídos en el datagrama por defecto.
 			DatagramPacket paquete = new DatagramPacket(arrayDataOut, arrayDataOut.length, serverIP, serverPort);
 			try {
@@ -243,7 +243,7 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
     }//GEN-LAST:event_jButtonConectarActionPerformed
 
     private void jButtonDesconectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonDesconectarActionPerformed
-		// Envio datagrama al servidor para comunicar la desconección
+		// Envio datagrama al servidor para comunicar la desconexión
 		arrayDataOut = "Bye".getBytes();
 		DatagramPacket paquete = new DatagramPacket(arrayDataOut, arrayDataOut.length, serverIP, serverPort);
 		paquete.setData(arrayDataOut);
