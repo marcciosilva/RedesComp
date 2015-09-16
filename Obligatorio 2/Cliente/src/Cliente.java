@@ -3,6 +3,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.MulticastSocket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.logging.Level;
@@ -19,7 +20,32 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 	@Override
 	public void run() {
 		// Este es el thread que va a escuchar por nuevos mensajes y mostrarlos en el area del chat.
-		
+
+		// Fijo la dirección ip de donde voy a escuchar los mensajes 225.5.4.<nro_grupo>
+		try {
+			multicastIP = InetAddress.getByName("225.5.4.3");
+			multicastSocket = new MulticastSocket(6789);
+			multicastSocket.joinGroup(multicastIP);
+		} catch (UnknownHostException ex) {
+			Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+		} catch (IOException ex) {
+			Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+		}
+
+		while (true) {
+			try {
+				byte[] mensajes = new byte[PACKETSIZE];
+				DatagramPacket paquete = new DatagramPacket(mensajes, mensajes.length, multicastIP, multicastPort);
+				multicastSocket.receive(paquete);
+				String strMensaje = new String(paquete.getData(), 0, paquete.getLength());
+
+				// Se debe parsear el datagrama para obtener el apodo y el mensaje por separado
+				// para mostrarlos en el area de chat.
+				jTextAreaChat.append(strMensaje);
+			} catch (IOException ex) {
+				Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+			}
+		}
 	}
 
 	private boolean okIP(String ip) {
@@ -106,6 +132,11 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 
         jButtonEnviar.setText("Enviar");
         jButtonEnviar.setEnabled(false);
+        jButtonEnviar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButtonEnviarActionPerformed(evt);
+            }
+        });
         getContentPane().add(jButtonEnviar, new org.netbeans.lib.awtextra.AbsoluteConstraints(400, 310, -1, -1));
 
         pack();
@@ -151,7 +182,7 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 
 			// Construyo el paquete y lo envío "vacío" porque es solo para poder establecer la conección. El número de puerto 
 			// del cliente y la IP van incluídos en el datagrama por defecto.
-			DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
+			DatagramPacket paquete = new DatagramPacket(arrayDataOut, arrayDataOut.length, serverIP, serverPort);
 			try {
 				socketCliente.send(paquete);
 			} catch (IOException ex) {
@@ -191,7 +222,7 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 				// Corro el listener
 				listener = new Thread(this, "Escucha mensajes");
 				listener.start();
-				
+
 				JOptionPane.showMessageDialog(this, "Se ha conectado!", "Cliente", JOptionPane.INFORMATION_MESSAGE);
 			} else if (mensajeRecibido.equals("Apodo en uso")) {
 				JOptionPane.showMessageDialog(this, "Ya existe un usuario con el apodo " + apodo + "\nPor favor seleccione otro apodo.", "Cliente", JOptionPane.INFORMATION_MESSAGE);
@@ -213,9 +244,9 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 
     private void jButtonDesconectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonDesconectarActionPerformed
 		// Envio datagrama al servidor para comunicar la desconección
-		data = "Bye".getBytes();
-		DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
-		paquete.setData(data);
+		arrayDataOut = "Bye".getBytes();
+		DatagramPacket paquete = new DatagramPacket(arrayDataOut, arrayDataOut.length, serverIP, serverPort);
+		paquete.setData(arrayDataOut);
 		try {
 			socketCliente.send(paquete);
 		} catch (IOException ex) {
@@ -224,7 +255,7 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 
 		// Cierro el socket
 		socketCliente.close();
-		
+
 		// Mato al listener
 		try {
 			listener.join();
@@ -249,6 +280,21 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 		jLabelStatus.setText(strDesconectado);
     }//GEN-LAST:event_jButtonDesconectarActionPerformed
 
+    private void jButtonEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEnviarActionPerformed
+		// Obtengo el mensaje a ser enviado
+		String mensaje = jTextFieldMensaje.getText();
+		
+		// Creo y envío el datagrama
+		arrayDataOut = mensaje.getBytes();
+		DatagramPacket paquete = new DatagramPacket(arrayDataOut, arrayDataOut.length, serverIP, serverPort);
+		paquete.setData(arrayDataOut);
+		try {
+			socketCliente.send(paquete);
+		} catch (IOException ex) {
+			Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+		}		
+    }//GEN-LAST:event_jButtonEnviarActionPerformed
+
 	public static void main(String args[]) {
 		// Set look and Feel
 		try {
@@ -263,11 +309,14 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 		v.setVisible(true);
 	}
 
-	private	DatagramSocket socketCliente;
+	private DatagramSocket socketCliente;
+	private MulticastSocket multicastSocket;
 	private final static int PACKETSIZE = 1024;
-	private byte[] data = new byte[PACKETSIZE];
+	private byte[] arrayDataOut = new byte[PACKETSIZE];
 	private InetAddress serverIP;
+	private InetAddress multicastIP;
 	private int serverPort;
+	private final int multicastPort = 6789;
 	private String apodo;
 	private Thread listener;
 	private static String strDesconectado = "<html><font color='red'>Desconectado</font></html>";
