@@ -182,7 +182,8 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 
 			// Construyo el paquete y lo envío "vacío" porque es solo para poder establecer la conexión. El número de puerto 
 			// del cliente y la IP van incluídos en el datagrama por defecto.
-			DatagramPacket paquete = new DatagramPacket(arrayDataOut, arrayDataOut.length, serverIP, serverPort);
+			dataOut = ("LOGIN " + apodo + "\n").getBytes();
+			DatagramPacket paquete = new DatagramPacket(dataOut, dataOut.length, serverIP, serverPort);
 			try {
 				socketCliente.send(paquete);
 			} catch (IOException ex) {
@@ -244,15 +245,25 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 
     private void jButtonDesconectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonDesconectarActionPerformed
 		// Envio datagrama al servidor para comunicar la desconexión
-		arrayDataOut = "Bye".getBytes();
-		DatagramPacket paquete = new DatagramPacket(arrayDataOut, arrayDataOut.length, serverIP, serverPort);
-		paquete.setData(arrayDataOut);
+		dataOut = "LOGOUT\n".getBytes();
+		DatagramPacket paquete = new DatagramPacket(dataOut, dataOut.length, serverIP, serverPort);
+		paquete.setData(dataOut);
 		try {
 			socketCliente.send(paquete);
 		} catch (IOException ex) {
 			Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
 		}
 
+			// Espero por una respuesta con timeout de 2 segundos
+			try {
+				paquete.setData(new byte[PACKETSIZE]);
+				socketCliente.setSoTimeout(2000);
+				socketCliente.receive(paquete);
+			} catch (IOException ex) {
+				Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+				JOptionPane.showMessageDialog(this, "Error! No se ha recibido una respuesta del servidor", "Cliente", JOptionPane.INFORMATION_MESSAGE);
+			}
+			
 		// Cierro el socket
 		socketCliente.close();
 
@@ -276,7 +287,7 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 		jTextFieldPort.setEditable(true);
 		jTextFieldApodo.setEditable(true);
 
-		// Actualizo estado				
+		// Actualizo estado	en UI
 		jLabelStatus.setText(strDesconectado);
     }//GEN-LAST:event_jButtonDesconectarActionPerformed
 
@@ -285,9 +296,9 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 		String mensaje = jTextFieldMensaje.getText();
 		
 		// Creo y envío el datagrama
-		arrayDataOut = mensaje.getBytes();
-		DatagramPacket paquete = new DatagramPacket(arrayDataOut, arrayDataOut.length, serverIP, serverPort);
-		paquete.setData(arrayDataOut);
+		dataOut = ("MESSAGE" + mensaje + "\n").getBytes();
+		DatagramPacket paquete = new DatagramPacket(dataOut, dataOut.length, serverIP, serverPort);
+		paquete.setData(dataOut);
 		try {
 			socketCliente.send(paquete);
 		} catch (IOException ex) {
@@ -312,7 +323,7 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 	private DatagramSocket socketCliente;
 	private MulticastSocket multicastSocket;
 	private final static int PACKETSIZE = 1024;
-	private byte[] arrayDataOut = new byte[PACKETSIZE];
+	private byte[] dataOut = new byte[PACKETSIZE];
 	private InetAddress serverIP;
 	private InetAddress multicastIP;
 	private int serverPort;
