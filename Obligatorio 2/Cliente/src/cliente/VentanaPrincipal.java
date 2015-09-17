@@ -65,8 +65,19 @@ public class VentanaPrincipal extends javax.swing.JFrame {
             }
         });
         getContentPane().add(fieldInput, new org.netbeans.lib.awtextra.AbsoluteConstraints(520, 680, 437, -1));
+
+        fieldHost.setText("localhost");
+        fieldHost.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                fieldHostActionPerformed(evt);
+            }
+        });
         getContentPane().add(fieldHost, new org.netbeans.lib.awtextra.AbsoluteConstraints(199, 78, 186, -1));
+
+        fieldApodo.setText("pepito");
         getContentPane().add(fieldApodo, new org.netbeans.lib.awtextra.AbsoluteConstraints(199, 363, 186, -1));
+
+        fieldPort.setText("54321");
         getContentPane().add(fieldPort, new org.netbeans.lib.awtextra.AbsoluteConstraints(199, 221, 186, -1));
 
         jLabel1.setText("Host IP:");
@@ -160,6 +171,10 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         }
 
     }//GEN-LAST:event_botonConectarActionPerformed
+
+    private void fieldHostActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_fieldHostActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_fieldHostActionPerformed
 
     /**
      * @param args the command line arguments

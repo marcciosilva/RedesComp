@@ -59,6 +59,12 @@
       </Constraints>
     </Component>
     <Component class="javax.swing.JTextField" name="fieldHost">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="localhost"/>
+      </Properties>
+      <Events>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="fieldHostActionPerformed"/>
+      </Events>
       <Constraints>
         <Constraint layoutClass="org.netbeans.modules.form.compat2.layouts.DesignAbsoluteLayout" value="org.netbeans.modules.form.compat2.layouts.DesignAbsoluteLayout$AbsoluteConstraintsDescription">
           <AbsoluteConstraints x="199" y="78" width="186" height="-1"/>
@@ -66,6 +72,9 @@
       </Constraints>
     </Component>
     <Component class="javax.swing.JTextField" name="fieldApodo">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="pepito"/>
+      </Properties>
       <Constraints>
         <Constraint layoutClass="org.netbeans.modules.form.compat2.layouts.DesignAbsoluteLayout" value="org.netbeans.modules.form.compat2.layouts.DesignAbsoluteLayout$AbsoluteConstraintsDescription">
           <AbsoluteConstraints x="199" y="363" width="186" height="-1"/>
@@ -73,6 +82,9 @@
       </Constraints>
     </Component>
     <Component class="javax.swing.JTextField" name="fieldPort">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="54321"/>
+      </Properties>
       <Constraints>
         <Constraint layoutClass="org.netbeans.modules.form.compat2.layouts.DesignAbsoluteLayout" value="org.netbeans.modules.form.compat2.layouts.DesignAbsoluteLayout$AbsoluteConstraintsDescription">
           <AbsoluteConstraints x="199" y="221" width="186" height="-1"/>
