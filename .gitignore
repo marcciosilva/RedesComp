@@ -55,7 +55,6 @@ docs/_build/
 
 # PyBuilder
 target/
-/Obligatorio 2/Cliente/nbproject/private/
 
 # Java / Netbeans
 
@@ -74,7 +73,10 @@ hs_err_pid*
 /Obligatorio\ 2/Cliente/build/
 /Obligatorio\ 2/Cliente/dist/
 /Obligatorio\ 2/Cliente/.jacocoverage/
-
+/Obligatorio\ 2/Servidor/nbproject/private/
+/Obligatorio\ 2/Servidor/build/
+/Obligatorio\ 2/Servidor/dist/
+/Obligatorio\ 2/Servidor/.jacocoverage/
 
 # C++ / Eclipse
 
@@ -116,3 +118,5 @@ Release/**
 *.app
 /Obligatorio 2/Servidor/Debug/
 /Obligatorio 2/Servidor/Release/
+/Obligatorio 2/Cliente/Debug/
+/Obligatorio 2/Cliente/Release/
