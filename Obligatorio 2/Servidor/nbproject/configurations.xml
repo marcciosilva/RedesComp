@@ -12,9 +12,7 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <itemPath>Cliente.cpp</itemPath>
-      <itemPath>Cliente.h</itemPath>
-      <itemPath>Servidor.cpp</itemPath>
+      <itemPath>main.cpp</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
                    displayName="Test Files"
@@ -37,15 +35,8 @@
         <rebuildPropChanged>false</rebuildPropChanged>
       </toolsSet>
       <compileType>
-        <ccTool>
-          <standard>8</standard>
-        </ccTool>
       </compileType>
-      <item path="Cliente.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="Cliente.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="Servidor.cpp" ex="false" tool="1" flavor2="0">
+      <item path="main.cpp" ex="false" tool="1" flavor2="0">
       </item>
     </conf>
     <conf name="Release" type="1">
@@ -68,11 +59,7 @@
           <developmentMode>5</developmentMode>
         </asmTool>
       </compileType>
-      <item path="Cliente.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="Cliente.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="Servidor.cpp" ex="false" tool="1" flavor2="0">
+      <item path="main.cpp" ex="false" tool="1" flavor2="0">
       </item>
     </conf>
   </confs>
