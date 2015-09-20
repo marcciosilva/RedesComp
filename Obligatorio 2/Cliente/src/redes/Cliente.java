@@ -44,6 +44,7 @@ public class Cliente extends javax.swing.JFrame {
         jLabelStatus = new javax.swing.JLabel();
         jTextFieldMensaje = new javax.swing.JTextField();
         jButtonEnviar = new javax.swing.JButton();
+        jButtonListarConectados = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Cliente de Chat - Redes 2015");
@@ -73,7 +74,7 @@ public class Cliente extends javax.swing.JFrame {
                 jButtonConectarActionPerformed(evt);
             }
         });
-        getContentPane().add(jButtonConectar, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 180, -1, -1));
+        getContentPane().add(jButtonConectar, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 210, -1, -1));
 
         jButtonDesconectar.setText("Desconectar");
         jButtonDesconectar.setEnabled(false);
@@ -82,7 +83,7 @@ public class Cliente extends javax.swing.JFrame {
                 jButtonDesconectarActionPerformed(evt);
             }
         });
-        getContentPane().add(jButtonDesconectar, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 180, -1, -1));
+        getContentPane().add(jButtonDesconectar, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 210, -1, -1));
 
         jTextAreaChat.setColumns(16);
         jTextAreaChat.setRows(5);
@@ -108,6 +109,15 @@ public class Cliente extends javax.swing.JFrame {
             }
         });
         getContentPane().add(jButtonEnviar, new org.netbeans.lib.awtextra.AbsoluteConstraints(400, 310, -1, -1));
+
+        jButtonListarConectados.setText("Listar usuarios conectados");
+        jButtonListarConectados.setEnabled(false);
+        jButtonListarConectados.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButtonListarConectadosActionPerformed(evt);
+            }
+        });
+        getContentPane().add(jButtonListarConectados, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 160, 190, -1));
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -186,6 +196,7 @@ public class Cliente extends javax.swing.JFrame {
                 jTextFieldMensaje.setText("");
                 jTextFieldMensaje.setEnabled(true);
                 jButtonEnviar.setEnabled(true);
+                jButtonListarConectados.setEnabled(true);
 
                 // Actualizo estado
                 jLabelStatus.setText(strEnLinea);
@@ -251,6 +262,7 @@ public class Cliente extends javax.swing.JFrame {
         jTextFieldMensaje.setEnabled(false);
         jTextFieldMensaje.setText("Ingrese su mensaje");
         jButtonEnviar.setEnabled(false);
+        jButtonListarConectados.setEnabled(false);
 
         // Habilito
         jButtonConectar.setEnabled(true);
@@ -277,6 +289,13 @@ public class Cliente extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_jButtonEnviarActionPerformed
 
+    private void jButtonListarConectadosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonListarConectadosActionPerformed
+        if (!listadoUsuarios.isAlive()) {
+            listadoUsuarios = new ListadoUsuarios(jTextAreaChat, serverIP, serverPort);
+            listadoUsuarios.start();
+        }
+    }//GEN-LAST:event_jButtonListarConectadosActionPerformed
+
     public static void main(String args[]) {
         // Set look and Feel
         try {
@@ -301,12 +320,14 @@ public class Cliente extends javax.swing.JFrame {
     private final int multicastPort = 6789;
     private String apodo;
     private Thread listener;
+    private ListadoUsuarios listadoUsuarios;
     private static String strDesconectado = "<html><font color='red'>Desconectado</font></html>";
     private static String strEnLinea = "<html><font color='green'>En línea</font></html>";
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButtonConectar;
     private javax.swing.JButton jButtonDesconectar;
     private javax.swing.JButton jButtonEnviar;
+    private javax.swing.JButton jButtonListarConectados;
     private javax.swing.JLabel jLabelApodo;
     private javax.swing.JLabel jLabelHostIP;
     private javax.swing.JLabel jLabelPort;
