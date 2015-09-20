@@ -20,7 +20,7 @@ public class Cliente extends javax.swing.JFrame {
 
 	private boolean okIP(String ip) {
 		InetAddressValidator validator = InetAddressValidator.getInstance();
-		return validator.isValidInet4Address(ip);
+		return validator.isValidInet4Address(ip) || ip.equals("localhost");
 	}
 
 	private boolean strSinEspacios(String s) {
