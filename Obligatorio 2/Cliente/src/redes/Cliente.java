@@ -1,3 +1,4 @@
+package redes;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -11,41 +12,10 @@ import java.util.logging.Logger;
 import javax.swing.JOptionPane;
 import org.apache.commons.validator.routines.InetAddressValidator;
 
-public class Cliente extends javax.swing.JFrame implements Runnable {
+public class Cliente extends javax.swing.JFrame {
 
 	public Cliente() {
 		initComponents();
-	}
-
-	@Override
-	public void run() {
-		// Este es el thread que va a escuchar por nuevos mensajes y mostrarlos en el area del chat.
-
-		// Fijo la dirección ip de donde voy a escuchar los mensajes 225.5.4.<nro_grupo>
-		try {
-			multicastIP = InetAddress.getByName("225.5.4.3");
-			multicastSocket = new MulticastSocket(6789);
-			multicastSocket.joinGroup(multicastIP);
-		} catch (UnknownHostException ex) {
-			Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-		} catch (IOException ex) {
-			Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-		}
-
-		while (true) {
-			try {
-				byte[] mensajes = new byte[PACKETSIZE];
-				DatagramPacket paquete = new DatagramPacket(mensajes, mensajes.length, multicastIP, multicastPort);
-				multicastSocket.receive(paquete);
-				String strMensaje = new String(paquete.getData(), 0, paquete.getLength());
-
-				// Se debe parsear el datagrama para obtener el apodo y el mensaje por separado
-				// para mostrarlos en el area de chat.
-				jTextAreaChat.append(strMensaje);
-			} catch (IOException ex) {
-				Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-			}
-		}
 	}
 
 	private boolean okIP(String ip) {
@@ -221,8 +191,9 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 				jLabelStatus.setText(strEnLinea);
 
 				// Corro el listener
-				listener = new Thread(this, "Escucha mensajes");
-				listener.start();
+				Listener listenerObj = new Listener(this.jTextAreaChat);
+				Thread listenerThread = new Thread(listenerObj);
+				listenerThread.start();
 
 				JOptionPane.showMessageDialog(this, "Se ha conectado!", "Cliente", JOptionPane.INFORMATION_MESSAGE);
 			} else if (mensajeRecibido.equals("Apodo en uso")) {
@@ -254,16 +225,16 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 			Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
 		}
 
-			// Espero por una respuesta con timeout de 2 segundos
-			try {
-				paquete.setData(new byte[PACKETSIZE]);
-				socketCliente.setSoTimeout(2000);
-				socketCliente.receive(paquete);
-			} catch (IOException ex) {
-				Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-				JOptionPane.showMessageDialog(this, "Error! No se ha recibido una respuesta del servidor", "Cliente", JOptionPane.INFORMATION_MESSAGE);
-			}
-			
+		// Espero por una respuesta con timeout de 2 segundos
+		try {
+			paquete.setData(new byte[PACKETSIZE]);
+			socketCliente.setSoTimeout(2000);
+			socketCliente.receive(paquete);
+		} catch (IOException ex) {
+			Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+			JOptionPane.showMessageDialog(this, "Error! No se ha recibido una respuesta del servidor", "Cliente", JOptionPane.INFORMATION_MESSAGE);
+		}
+
 		// Cierro el socket
 		socketCliente.close();
 
@@ -294,7 +265,7 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
     private void jButtonEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEnviarActionPerformed
 		// Obtengo el mensaje a ser enviado
 		String mensaje = jTextFieldMensaje.getText();
-		
+
 		// Creo y envío el datagrama
 		dataOut = ("MESSAGE" + mensaje + "\n").getBytes();
 		DatagramPacket paquete = new DatagramPacket(dataOut, dataOut.length, serverIP, serverPort);
@@ -303,7 +274,7 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 			socketCliente.send(paquete);
 		} catch (IOException ex) {
 			Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-		}		
+		}
     }//GEN-LAST:event_jButtonEnviarActionPerformed
 
 	public static void main(String args[]) {
@@ -322,7 +293,7 @@ public class Cliente extends javax.swing.JFrame implements Runnable {
 
 	private DatagramSocket socketCliente;
 	private MulticastSocket multicastSocket;
-	private final static int PACKETSIZE = 1024;
+	public final static int PACKETSIZE = 1024;
 	private byte[] dataOut = new byte[PACKETSIZE];
 	private InetAddress serverIP;
 	private InetAddress multicastIP;
