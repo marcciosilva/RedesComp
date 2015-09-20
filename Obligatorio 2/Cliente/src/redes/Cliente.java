@@ -14,20 +14,20 @@ import org.apache.commons.validator.routines.InetAddressValidator;
 
 public class Cliente extends javax.swing.JFrame {
 
-	public Cliente() {
-		initComponents();
-	}
+    public Cliente() {
+        initComponents();
+    }
 
-	private boolean okIP(String ip) {
-		InetAddressValidator validator = InetAddressValidator.getInstance();
-		return validator.isValidInet4Address(ip) || ip.equals("localhost");
-	}
+    private boolean okIP(String ip) {
+        InetAddressValidator validator = InetAddressValidator.getInstance();
+        return validator.isValidInet4Address(ip) || ip.equals("localhost");
+    }
 
-	private boolean strSinEspacios(String s) {
-		return !(s.matches(".*(\\s+).*") || s.matches(""));
-	}
+    private boolean strSinEspacios(String s) {
+        return !(s.matches(".*(\\s+).*") || s.matches(""));
+    }
 
-	@SuppressWarnings("unchecked")
+    @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
@@ -46,7 +46,7 @@ public class Cliente extends javax.swing.JFrame {
         jButtonEnviar = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setTitle("Cliente de Chat");
+        setTitle("Cliente de Chat - Redes 2015");
         setMinimumSize(new java.awt.Dimension(500, 380));
         setResizable(false);
         setSize(new java.awt.Dimension(500, 380));
@@ -113,196 +113,196 @@ public class Cliente extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButtonConectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonConectarActionPerformed
-		String strHostIP = jTextFieldHostIP.getText();
-		String strPort = jTextFieldPort.getText();
-		apodo = jTextFieldApodo.getText();
+        String strHostIP = jTextFieldHostIP.getText();
+        String strPort = jTextFieldPort.getText();
+        apodo = jTextFieldApodo.getText();
 
-		// Verificar IP
-		serverIP = null;
-		try {
-			serverIP = InetAddress.getByName(strHostIP);
-		} catch (UnknownHostException ex) {
-			Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-		}
-		boolean okIP = okIP(strHostIP);
+        // Verificar IP
+        serverIP = null;
+        try {
+            serverIP = InetAddress.getByName(strHostIP);
+        } catch (UnknownHostException ex) {
+            Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        boolean okIP = okIP(strHostIP);
 
-		// Verificar Puerto
-		boolean okPort;
-		try {
-			serverPort = Integer.parseInt(strPort);
-			okPort = serverPort >= 4000;
-		} catch (NumberFormatException e) {
-			okPort = false;
-			System.err.println(e);
-		}
+        // Verificar Puerto
+        boolean okPort;
+        try {
+            serverPort = Integer.parseInt(strPort);
+            okPort = serverPort >= 4000;
+        } catch (NumberFormatException e) {
+            okPort = false;
+            System.err.println(e);
+        }
 
-		// Verificar Apodo
-		boolean okApodo = strSinEspacios(apodo);
+        // Verificar Apodo
+        boolean okApodo = strSinEspacios(apodo);
 
-		// Mandar datagrama y esperar por conexión exitosa
-		if (okIP && okPort && okApodo) {
+        // Mandar datagrama y esperar por conexión exitosa
+        if (okIP && okPort && okApodo) {
 
-			// Intento abrir un DatagramSocket
-			try {
-				socketCliente = new DatagramSocket();
-			} catch (SocketException ex) {
-				Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-				JOptionPane.showMessageDialog(this, "Error! No se pudo abrir un puerto para la conección", "Cliente", JOptionPane.INFORMATION_MESSAGE);
-			}
+            // Intento abrir un DatagramSocket
+            try {
+                socketCliente = new DatagramSocket();
+            } catch (SocketException ex) {
+                Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+                JOptionPane.showMessageDialog(this, "Error! No se pudo abrir un puerto para la conección", "Cliente", JOptionPane.INFORMATION_MESSAGE);
+            }
 
-			// Construyo el paquete y lo envío "vacío" porque es solo para poder establecer la conexión. El número de puerto 
-			// del cliente y la IP van incluídos en el datagrama por defecto.
-			dataOut = ("LOGIN " + apodo + "\n").getBytes();
-			DatagramPacket paquete = new DatagramPacket(dataOut, dataOut.length, serverIP, serverPort);
-			try {
-				socketCliente.send(paquete);
-			} catch (IOException ex) {
-				Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-			}
+            // Construyo el paquete y lo envío "vacío" porque es solo para poder establecer la conexión. El número de puerto
+            // del cliente y la IP van incluídos en el datagrama por defecto.
+            dataOut = ("LOGIN " + apodo + "\n").getBytes();
+            DatagramPacket paquete = new DatagramPacket(dataOut, dataOut.length, serverIP, serverPort);
+            try {
+                socketCliente.send(paquete);
+            } catch (IOException ex) {
+                Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
-			// Espero por una respuesta con timeout de 2 segundos
-			try {
-				paquete.setData(new byte[PACKETSIZE]);
-				socketCliente.setSoTimeout(2000);
-				socketCliente.receive(paquete);
-			} catch (IOException ex) {
-				Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-				JOptionPane.showMessageDialog(this, "Error! No se ha recibido una respuesta del servidor", "Cliente", JOptionPane.INFORMATION_MESSAGE);
-			}
+            // Espero por una respuesta con timeout de 2 segundos
+            try {
+                paquete.setData(new byte[PACKETSIZE]);
+                socketCliente.setSoTimeout(2000);
+                socketCliente.receive(paquete);
+            } catch (IOException ex) {
+                Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+                JOptionPane.showMessageDialog(this, "Error! No se ha recibido una respuesta del servidor", "Cliente", JOptionPane.INFORMATION_MESSAGE);
+            }
 
-			String mensajeRecibido = new String(paquete.getData(), 0, paquete.getLength());
+            String mensajeRecibido = new String(paquete.getData(), 0, paquete.getLength());
 
-			// Proceso la respuesta "OK"/"Apodo en uso"
-			if (mensajeRecibido.equals("OK")) {
-				// Deshabilito
-				jButtonConectar.setEnabled(false);
-				jTextFieldHostIP.setEditable(false);
-				jTextFieldPort.setEditable(false);
-				jTextFieldApodo.setEditable(false);
+            // Proceso la respuesta "OK"/"Apodo en uso"
+            if (mensajeRecibido.equals("OK")) {
+                // Deshabilito
+                jButtonConectar.setEnabled(false);
+                jTextFieldHostIP.setEditable(false);
+                jTextFieldPort.setEditable(false);
+                jTextFieldApodo.setEditable(false);
 
-				// Habilito
-				jButtonDesconectar.setEnabled(true);
-				jTextAreaChat.setEnabled(true);
-				jTextFieldMensaje.setText("");
-				jTextFieldMensaje.setEnabled(true);
-				jButtonEnviar.setEnabled(true);
+                // Habilito
+                jButtonDesconectar.setEnabled(true);
+                jTextAreaChat.setEnabled(true);
+                jTextFieldMensaje.setText("");
+                jTextFieldMensaje.setEnabled(true);
+                jButtonEnviar.setEnabled(true);
 
-				// Actualizo estado				
-				jLabelStatus.setText(strEnLinea);
+                // Actualizo estado
+                jLabelStatus.setText(strEnLinea);
 
-				// Corro el listener
-				Listener listenerObj = new Listener(this.jTextAreaChat);
-				Thread listenerThread = new Thread(listenerObj);
-				listenerThread.start();
+                // Corro el listener
+                Listener listenerObj = new Listener(this.jTextAreaChat);
+                Thread listenerThread = new Thread(listenerObj);
+                listenerThread.start();
 
-				JOptionPane.showMessageDialog(this, "Se ha conectado!", "Cliente", JOptionPane.INFORMATION_MESSAGE);
-			} else if (mensajeRecibido.equals("Apodo en uso")) {
-				JOptionPane.showMessageDialog(this, "Ya existe un usuario con el apodo " + apodo + "\nPor favor seleccione otro apodo.", "Cliente", JOptionPane.INFORMATION_MESSAGE);
-			}
+                JOptionPane.showMessageDialog(this, "Se ha conectado!", "Cliente", JOptionPane.INFORMATION_MESSAGE);
+            } else if (mensajeRecibido.equals("Apodo en uso")) {
+                JOptionPane.showMessageDialog(this, "Ya existe un usuario con el apodo " + apodo + "\nPor favor seleccione otro apodo.", "Cliente", JOptionPane.INFORMATION_MESSAGE);
+            }
 
-		} else {
-			String error = "";
-			if (!okIP) {
-				error = "La IP ingresada no es válida.";
-			} else if (!okPort) {
-				error = "El número de puerto ingresado no es válido.";
-			} else if (!okApodo) {
-				error = "El Apodo ingresado no es válido.\nEl mismo no debe contener espacios.";
-			}
-			JOptionPane.showMessageDialog(this, "Error! " + error, "Cliente", JOptionPane.INFORMATION_MESSAGE);
-		}
+        } else {
+            String error = "";
+            if (!okIP) {
+                error = "La IP ingresada no es válida.";
+            } else if (!okPort) {
+                error = "El número de puerto ingresado no es válido.";
+            } else if (!okApodo) {
+                error = "El Apodo ingresado no es válido.\nEl mismo no debe contener espacios.";
+            }
+            JOptionPane.showMessageDialog(this, "Error! " + error, "Cliente", JOptionPane.ERROR_MESSAGE);
+        }
 
     }//GEN-LAST:event_jButtonConectarActionPerformed
 
     private void jButtonDesconectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonDesconectarActionPerformed
-		// Envio datagrama al servidor para comunicar la desconexión
-		dataOut = "LOGOUT\n".getBytes();
-		DatagramPacket paquete = new DatagramPacket(dataOut, dataOut.length, serverIP, serverPort);
-		paquete.setData(dataOut);
-		try {
-			socketCliente.send(paquete);
-		} catch (IOException ex) {
-			Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-		}
+        // Envio datagrama al servidor para comunicar la desconexión
+        dataOut = "LOGOUT\n".getBytes();
+        DatagramPacket paquete = new DatagramPacket(dataOut, dataOut.length, serverIP, serverPort);
+        paquete.setData(dataOut);
+        try {
+            socketCliente.send(paquete);
+        } catch (IOException ex) {
+            Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+        }
 
-		// Espero por una respuesta con timeout de 2 segundos
-		try {
-			paquete.setData(new byte[PACKETSIZE]);
-			socketCliente.setSoTimeout(2000);
-			socketCliente.receive(paquete);
-		} catch (IOException ex) {
-			Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-			JOptionPane.showMessageDialog(this, "Error! No se ha recibido una respuesta del servidor", "Cliente", JOptionPane.INFORMATION_MESSAGE);
-		}
+        // Espero por una respuesta con timeout de 2 segundos
+        try {
+            paquete.setData(new byte[PACKETSIZE]);
+            socketCliente.setSoTimeout(2000);
+            socketCliente.receive(paquete);
+        } catch (IOException ex) {
+            Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+            JOptionPane.showMessageDialog(this, "Error! No se ha recibido una respuesta del servidor", "Cliente", JOptionPane.INFORMATION_MESSAGE);
+        }
 
-		// Cierro el socket
-		socketCliente.close();
+        // Cierro el socket
+        socketCliente.close();
 
-		// Mato al listener
-		try {
-			listener.join();
-		} catch (InterruptedException ex) {
-			Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-		}
+        // Mato al listener
+        try {
+            listener.join();
+        } catch (InterruptedException ex) {
+            Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+        }
 
-		// Deshabilito
-		jButtonDesconectar.setEnabled(false);
-		jTextAreaChat.setEnabled(false);
-		jTextFieldMensaje.setEnabled(false);
-		jTextFieldMensaje.setText("Ingrese su mensaje");
-		jButtonEnviar.setEnabled(false);
+        // Deshabilito
+        jButtonDesconectar.setEnabled(false);
+        jTextAreaChat.setEnabled(false);
+        jTextFieldMensaje.setEnabled(false);
+        jTextFieldMensaje.setText("Ingrese su mensaje");
+        jButtonEnviar.setEnabled(false);
 
-		// Habilito
-		jButtonConectar.setEnabled(true);
-		jTextFieldHostIP.setEditable(true);
-		jTextFieldPort.setEditable(true);
-		jTextFieldApodo.setEditable(true);
+        // Habilito
+        jButtonConectar.setEnabled(true);
+        jTextFieldHostIP.setEditable(true);
+        jTextFieldPort.setEditable(true);
+        jTextFieldApodo.setEditable(true);
 
-		// Actualizo estado	en UI
-		jLabelStatus.setText(strDesconectado);
+        // Actualizo estado	en UI
+        jLabelStatus.setText(strDesconectado);
     }//GEN-LAST:event_jButtonDesconectarActionPerformed
 
     private void jButtonEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEnviarActionPerformed
-		// Obtengo el mensaje a ser enviado
-		String mensaje = jTextFieldMensaje.getText();
+        // Obtengo el mensaje a ser enviado
+        String mensaje = jTextFieldMensaje.getText();
 
-		// Creo y envío el datagrama
-		dataOut = ("MESSAGE" + mensaje + "\n").getBytes();
-		DatagramPacket paquete = new DatagramPacket(dataOut, dataOut.length, serverIP, serverPort);
-		paquete.setData(dataOut);
-		try {
-			socketCliente.send(paquete);
-		} catch (IOException ex) {
-			Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-		}
+        // Creo y envío el datagrama
+        dataOut = ("MESSAGE" + mensaje + "\n").getBytes();
+        DatagramPacket paquete = new DatagramPacket(dataOut, dataOut.length, serverIP, serverPort);
+        paquete.setData(dataOut);
+        try {
+            socketCliente.send(paquete);
+        } catch (IOException ex) {
+            Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }//GEN-LAST:event_jButtonEnviarActionPerformed
 
-	public static void main(String args[]) {
-		// Set look and Feel
-		try {
-			javax.swing.UIManager.setLookAndFeel("com.sun.java.swing.plaf.gtk.GTKLookAndFeel");
-		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
-			java.util.logging.Logger.getLogger(Cliente.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-		}
+    public static void main(String args[]) {
+        // Set look and Feel
+        try {
+            javax.swing.UIManager.setLookAndFeel("com.sun.java.swing.plaf.gtk.GTKLookAndFeel");
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
+            java.util.logging.Logger.getLogger(Cliente.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
 
-		// Creo jFrame
-		Cliente v = new Cliente();
-		v.setLocationRelativeTo(null);
-		v.setVisible(true);
-	}
+        // Creo jFrame
+        Cliente v = new Cliente();
+        v.setLocationRelativeTo(null);
+        v.setVisible(true);
+    }
 
-	private DatagramSocket socketCliente;
-	private MulticastSocket multicastSocket;
-	public final static int PACKETSIZE = 1024;
-	private byte[] dataOut = new byte[PACKETSIZE];
-	private InetAddress serverIP;
-	private InetAddress multicastIP;
-	private int serverPort;
-	private final int multicastPort = 6789;
-	private String apodo;
-	private Thread listener;
-	private static String strDesconectado = "<html><font color='red'>Desconectado</font></html>";
-	private static String strEnLinea = "<html><font color='green'>En línea</font></html>";
+    private DatagramSocket socketCliente;
+    private MulticastSocket multicastSocket;
+    public final static int PACKETSIZE = 1024;
+    private byte[] dataOut = new byte[PACKETSIZE];
+    private InetAddress serverIP;
+    private InetAddress multicastIP;
+    private int serverPort;
+    private final int multicastPort = 6789;
+    private String apodo;
+    private Thread listener;
+    private static String strDesconectado = "<html><font color='red'>Desconectado</font></html>";
+    private static String strEnLinea = "<html><font color='green'>En línea</font></html>";
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButtonConectar;
     private javax.swing.JButton jButtonDesconectar;
