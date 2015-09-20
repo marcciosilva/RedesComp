@@ -65,8 +65,11 @@ public class Cliente extends javax.swing.JFrame {
         jLabelApodo.setText("Apodo:");
         getContentPane().add(jLabelApodo, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 110, 70, -1));
         getContentPane().add(jTextFieldHostIP, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 30, 120, -1));
+        jTextFieldHostIP.setText("127.0.0.1");
         getContentPane().add(jTextFieldPort, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 70, 60, -1));
+        jTextFieldPort.setText("54321");
         getContentPane().add(jTextFieldApodo, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 110, 120, -1));
+        jTextFieldApodo.setText("anonimo");
 
         jButtonConectar.setText("Conectar");
         jButtonConectar.addActionListener(new java.awt.event.ActionListener() {
@@ -170,7 +173,9 @@ public class Cliente extends javax.swing.JFrame {
                 Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
             }
 
-            // Espero por una respuesta con timeout de 2 segundos
+			
+// Comentado hasta que el servidor no envíe 
+/*            // Espero por una respuesta con timeout de 2 segundos
             try {
                 paquete.setData(new byte[PACKETSIZE]);
                 socketCliente.setSoTimeout(2000);
@@ -181,7 +186,8 @@ public class Cliente extends javax.swing.JFrame {
             }
 
             String mensajeRecibido = new String(paquete.getData(), 0, paquete.getLength());
-
+*/		
+			String mensajeRecibido = "OK";
             // Proceso la respuesta "OK"/"Apodo en uso"
             if (mensajeRecibido.equals("OK")) {
                 // Deshabilito
@@ -287,6 +293,9 @@ public class Cliente extends javax.swing.JFrame {
         } catch (IOException ex) {
             Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
         }
+		
+		// Limpio la línea de mensaje
+		jTextFieldMensaje.setText("");
     }//GEN-LAST:event_jButtonEnviarActionPerformed
 
     private void jButtonListarConectadosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonListarConectadosActionPerformed
