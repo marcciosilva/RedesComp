@@ -100,26 +100,26 @@ int main(int argc, char**argv) {
     bind(sockfd, (struct sockaddr *) &servaddr, sizeof (servaddr));
 
     cout << "Servidor iniciado\n\n";
-
+	char res[32] = {0};
     while (true) {
 
         len = sizeof (cliaddr);
         n = recvfrom(sockfd, mesg, 1000, 0, (struct sockaddr *) &cliaddr, &len);
-
+		
         if (esLogin()) {
             if (apodoDisponible()) {
-                strncpy(mesg, "", 1000);
+                //strcpy(res, "");
                 cout << "Nombre disponible" << endl; //nombre disponible
-                strncpy(mesg, "OK", 2);
+                strcpy(res, "OK");
             } else {
-                strncpy(mesg, "", 1000);
+                strcpy(res, "");
                 cout << "Nombre no disponible" << endl; //nombre no disponible, ya en uso
-                strncpy(mesg, "NOK", 3);
+                strcpy(res, "NOK");
             }
         }
 
-        sendto(sockfd, mesg, n, 0, (struct sockaddr *) &cliaddr, sizeof (cliaddr));
-        mesg[n] = 0; //asumo que deja en null todos los caracteres
+        sendto(sockfd, res, n, 0, (struct sockaddr *) &cliaddr, sizeof (cliaddr));
+        mesg[n] = 0;
         cout << "Mensaje recibido:\n";
         cout << mesg;
         cout << "--Fin--\n\n";
