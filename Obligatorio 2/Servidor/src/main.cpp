@@ -18,7 +18,7 @@ socklen_t len;
 char mesg[1000];
 
 bool esLogin() {
-    char* regexpLogin = "LOGIN\\s(\\w+)";
+    char* regexpLogin = "LOGIN";
     //distingo entre tipos de mensaje
     int i = 0;
     int res;
@@ -89,6 +89,53 @@ bool apodoDisponible() {
     return true;
 }
 
+bool esLogout() {
+    char* regexpLogin = "LOGOUT\n";
+    //distingo entre tipos de mensaje
+    int i = 0;
+    int res;
+    int len;
+    char result[BUFSIZ];
+    char err_buf[BUFSIZ];
+    //        char* src = "hello world";
+    //    const char* pattern = "(\\w+)";
+    regex_t preg;
+
+    regmatch_t pmatch[10];
+
+    if ((res = regcomp(&preg, regexpLogin, REG_EXTENDED)) != 0) {
+        regerror(res, &preg, err_buf, BUFSIZ);
+        printf("regcomp: %s\n", err_buf);
+        exit(res);
+    }
+
+    res = regexec(&preg, mesg, 10, pmatch, REG_NOTBOL);
+
+    regfree(&preg);
+    if (res == REG_NOMATCH) {
+        return false;
+    } else {
+        // quito al cliente de mi lista de clientes
+        map<string, struct sockaddr_in>::iterator it = clientes.begin();
+        bool found = false;
+        while (it != clientes.end() && !found) {
+            //            sin.sin_addr == some_addr && sin.sin_port == some_port
+            if (ntohl(it->second.sin_addr.s_addr) == ntohl(cliaddr.sin_addr.s_addr) &&
+                    ntohl(it->second.sin_port) == ntohl(cliaddr.sin_port)) {
+                found = true;
+            } else {
+                it++;
+            }
+        }
+        // asumo que es imposible que el cliente no esté a ésta altura del partido
+        // pero igual agrego seguridad
+        if (found) {
+            clientes.erase(it);
+        }
+        return true;
+    }
+}
+
 int main(int argc, char**argv) {
 
 
@@ -100,22 +147,24 @@ int main(int argc, char**argv) {
     bind(sockfd, (struct sockaddr *) &servaddr, sizeof (servaddr));
 
     cout << "Servidor iniciado\n\n";
-	char res[32] = {0};
+    char res[32] = {0};
     while (true) {
 
         len = sizeof (cliaddr);
         n = recvfrom(sockfd, mesg, 1000, 0, (struct sockaddr *) &cliaddr, &len);
-		
+
         if (esLogin()) {
             if (apodoDisponible()) {
                 //strcpy(res, "");
                 cout << "Nombre disponible" << endl; //nombre disponible
                 strcpy(res, "OK");
             } else {
-                strcpy(res, "");
+                //                strcpy(res, "");
                 cout << "Nombre no disponible" << endl; //nombre no disponible, ya en uso
                 strcpy(res, "NOK");
             }
+        } else if (esLogout()) {
+            strcpy(res, "GOODBYE");
         }
 
         sendto(sockfd, res, n, 0, (struct sockaddr *) &cliaddr, sizeof (cliaddr));
