@@ -26,6 +26,39 @@ public class Cliente extends javax.swing.JFrame {
     private boolean strSinEspacios(String s) {
         return !(s.matches(".*(\\s+).*") || s.matches(""));
     }
+	
+	private void terminarConexion() {
+		// Cierro el socket
+		if (socketCliente != null && !socketCliente.isClosed()) {
+			socketCliente.close();
+		}
+        
+        // Mato al listener
+        try {
+			if (listener != null && listener.isAlive()) {
+				listener.join();
+			}
+        } catch (InterruptedException ex) {
+            Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        // Deshabilito
+        jButtonDesconectar.setEnabled(false);
+        jTextAreaChat.setEnabled(false);
+        jTextFieldMensaje.setEnabled(false);
+        jTextFieldMensaje.setText("Ingrese su mensaje");
+        jButtonEnviar.setEnabled(false);
+        jButtonListarConectados.setEnabled(false);
+
+        // Habilito
+        jButtonConectar.setEnabled(true);
+        jTextFieldHostIP.setEditable(true);
+        jTextFieldPort.setEditable(true);
+        jTextFieldApodo.setEditable(true);
+
+        // Actualizo estado	en UI
+        jLabelStatus.setText(strDesconectado);
+	}
 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -51,6 +84,11 @@ public class Cliente extends javax.swing.JFrame {
         setMinimumSize(new java.awt.Dimension(500, 380));
         setResizable(false);
         setSize(new java.awt.Dimension(500, 380));
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            public void windowClosing(java.awt.event.WindowEvent evt) {
+                cerrandoVentanaEvent(evt);
+            }
+        });
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         jLabelHostIP.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
@@ -252,32 +290,7 @@ public class Cliente extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Error! No se ha recibido una respuesta del servidor", "Cliente", JOptionPane.INFORMATION_MESSAGE);
         }
 
-        // Cierro el socket
-        socketCliente.close();
-
-        // Mato al listener
-        try {
-            listener.join();
-        } catch (InterruptedException ex) {
-            Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-        // Deshabilito
-        jButtonDesconectar.setEnabled(false);
-        jTextAreaChat.setEnabled(false);
-        jTextFieldMensaje.setEnabled(false);
-        jTextFieldMensaje.setText("Ingrese su mensaje");
-        jButtonEnviar.setEnabled(false);
-        jButtonListarConectados.setEnabled(false);
-
-        // Habilito
-        jButtonConectar.setEnabled(true);
-        jTextFieldHostIP.setEditable(true);
-        jTextFieldPort.setEditable(true);
-        jTextFieldApodo.setEditable(true);
-
-        // Actualizo estado	en UI
-        jLabelStatus.setText(strDesconectado);
+        
     }//GEN-LAST:event_jButtonDesconectarActionPerformed
 
     private void jButtonEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEnviarActionPerformed
@@ -304,6 +317,11 @@ public class Cliente extends javax.swing.JFrame {
             listadoUsuarios.start();
         }
     }//GEN-LAST:event_jButtonListarConectadosActionPerformed
+
+    private void cerrandoVentanaEvent(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_cerrandoVentanaEvent
+        terminarConexion();
+		this.dispose();
+    }//GEN-LAST:event_cerrandoVentanaEvent
 
     public static void main(String args[]) {
         // Set look and Feel
