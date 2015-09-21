@@ -9,7 +9,7 @@ int main(int argc, char**argv)
    socklen_t len;
    char mesg[1000];
 
-   sockfd=socket(AF_INET,SOCK_DGRAM,0);
+   sockfd = socket(AF_INET,SOCK_DGRAM,IPPROTO_ICMP);
 
    servaddr.sin_family = AF_INET;
    servaddr.sin_addr.s_addr=htonl(INADDR_ANY);
@@ -17,14 +17,14 @@ int main(int argc, char**argv)
    bind(sockfd,(struct sockaddr *)&servaddr,sizeof(servaddr));
    
    printf("Servidor iniciado\n\n");
-   for (;;)
-   {
+   
+   while (true){
       len = sizeof(cliaddr);
       n = recvfrom(sockfd,mesg,1000,0,(struct sockaddr *)&cliaddr,&len);
       sendto(sockfd,mesg,n,0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
       mesg[n] = 0;
       printf("Mensaje recibido:\n");
-      printf("%s",mesg);
-	  printf("//FIN\n\n");
+      printf(mesg);
+	  printf("--Fin--\n\n");
    }
 }
