@@ -25,7 +25,7 @@ char mesg[MAXBUFSIZE];
 int sockMulticast, status, socklen;
 struct sockaddr_in saddr;
 struct in_addr iaddr;
-unsigned char ttl = 3;
+unsigned char ttl = 5;
 unsigned char one = 1;
 
 bool esLogin() {
@@ -170,7 +170,7 @@ int main(int argc, char**argv) {
 	saddr.sin_family = PF_INET;
 	saddr.sin_port = htons(0); // Use the first free port
 	saddr.sin_addr.s_addr = htonl(INADDR_ANY); // bind socket to any interface
-	status = bind(sockMulticast, (struct sockaddr *) &saddr, sizeof (struct sockaddr_in));
+	status = bind(sockMulticast, (struct sockaddr *) &saddr, (socklen_t)sizeof (saddr));
 
 	if (status < 0)
 		perror("Error binding socket to interface");
@@ -192,7 +192,7 @@ int main(int argc, char**argv) {
 	// set destination multicast address
 	saddr.sin_family = PF_INET;
 	saddr.sin_addr.s_addr = inet_addr("225.5.4.3");
-	saddr.sin_port = htons(4096);
+	saddr.sin_port = htons(6789); // No cambiar! Debe sre el mismo en el Listener
 
 
 
@@ -239,7 +239,8 @@ int main(int argc, char**argv) {
 		cout << mesg;
 		cout << "--Fin--\n\n";
 	}
+
 	// shutdown socket
-   shutdown(sockMulticast, 2);
-   close(sockMulticast);
+	shutdown(sockMulticast, 2);
+	close(sockMulticast);
 }
