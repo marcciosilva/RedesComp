@@ -223,7 +223,7 @@ public class Cliente extends javax.swing.JFrame {
                 socketCliente.receive(paquete);
             } catch (IOException e) {
                 System.err.println(e.toString());
-                JOptionPane.showMessageDialog(this, "No se ha recibido una respuesta del servidor", "Cliente", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Atención! No se ha recibido una respuesta del servidor", "Cliente", JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
 
@@ -253,7 +253,7 @@ public class Cliente extends javax.swing.JFrame {
                 Listener listenerObj = new Listener(this.jTextAreaChat);
                 Thread listenerThread = new Thread(listenerObj);
                 listenerThread.start();
-                jTextAreaChat.append("\nUsted está en linea!");
+                jTextAreaChat.append("Usted está en linea!\n");
             } else if (respuesta.equals("NOK")) {
                 JOptionPane.showMessageDialog(this, "Ya existe un usuario con el apodo " + apodo + "\nPor favor seleccione otro apodo.", "Cliente", JOptionPane.INFORMATION_MESSAGE);
             }
@@ -291,14 +291,14 @@ public class Cliente extends javax.swing.JFrame {
             socketCliente.receive(paquete);
         } catch (IOException e) {
             System.err.println(e.toString());
-            JOptionPane.showMessageDialog(this, "No se ha recibido una respuesta del servidor", "Cliente", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Atención! No se ha recibido una respuesta del servidor", "Cliente", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
         // Convierto el byte [] de la respuesta en un String
         String respuesta = new String(paquete.getData()).split("\0")[0];
-
-        if (respuesta.equals("GOODBYE")) {
+        
+		if (respuesta.equals("GOODBYE")) {
             terminarConexion();
         } else {
             System.err.println("Respuesta del servidor: " + respuesta);
@@ -313,7 +313,7 @@ public class Cliente extends javax.swing.JFrame {
         // Me fijo si ingresó texto
         if (!chatMsj.isEmpty()) {
             // Creo y envío el datagrama
-            dataOut = ("MESSAGE" + chatMsj + "\n").getBytes();
+            dataOut = ("MESSAGE " + chatMsj + "\n").getBytes();
             DatagramPacket paquete = new DatagramPacket(dataOut, dataOut.length, serverIP, serverPort);
             paquete.setData(dataOut);
             try {

@@ -27,8 +27,8 @@ public class Listener implements Runnable {
 
         // Fijo la dirección ip de donde voy a escuchar los mensajes 225.5.4.<nro_grupo>
         try {
-            multicastIP = InetAddress.getByName("225.5.4.3");
-            multicastSocket = new MulticastSocket(6789);
+			multicastIP = InetAddress.getByName("225.5.4.3");
+            multicastSocket = new MulticastSocket(multicastPort);
             multicastSocket.joinGroup(multicastIP);
         } catch (UnknownHostException ex) {
             Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
@@ -38,15 +38,17 @@ public class Listener implements Runnable {
 
         while (true) {
             try {
+				
                 byte[] mensajes = new byte[PACKETSIZE];
-                DatagramPacket paquete = new DatagramPacket(mensajes, mensajes.length, multicastIP, multicastPort);
+                DatagramPacket paquete = new DatagramPacket(mensajes, mensajes.length);
                 multicastSocket.receive(paquete);
+				System.out.println("YAY !!!!!!!!!!!!!!!");
                 String strMensaje = new String(paquete.getData(), 0, paquete.getLength());
 
                 // Se debe parsear el datagrama para obtener el apodo y el mensaje por separado
                 // para mostrarlos en el area de chat.
                 synchronized (jTextAreaChat) {
-                    jTextAreaChat.append("\n" + strMensaje);
+                    jTextAreaChat.append(strMensaje + "\n");
                     jTextAreaChat.updateUI();
                 }
             } catch (IOException ex) {

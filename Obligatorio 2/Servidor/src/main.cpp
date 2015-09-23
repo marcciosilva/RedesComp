@@ -1,7 +1,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <stdio.h>
-#include<map>
+#include <map>
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,10 +13,10 @@
 using namespace std;
 
 map<string, struct sockaddr_in> clientes;
-int sockfd, n;
-struct sockaddr_in servaddr, cliaddr;
+int sockUnicast,sockMulticast, n;
+struct sockaddr_in servUnicAddr, cliaddr, servMulticAddr;
 socklen_t len;
-char mesg[1000];
+char mesg[1024];
 
 bool esLogin() {
     char* regexpLogin = "LOGIN";
@@ -139,35 +140,52 @@ bool esLogout() {
 int main(int argc, char**argv) {
 
 
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    sockUnicast = socket(AF_INET, SOCK_DGRAM, 0);
 
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(54321);
-    bind(sockfd, (struct sockaddr *) &servaddr, sizeof (servaddr));
+    servUnicAddr.sin_family = AF_INET;
+    servUnicAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servUnicAddr.sin_port = htons(54321);
+    bind(sockUnicast, (struct sockaddr *) &servUnicAddr, sizeof (servUnicAddr));
 
+	
+	sockMulticast = socket(AF_INET, SOCK_DGRAM, 0);
+	memset(&sockMulticast,0,sizeof(sockMulticast));
+    servMulticAddr.sin_family = AF_INET;
+    servMulticAddr.sin_addr.s_addr = inet_addr("225.5.4.3");
+    servMulticAddr.sin_port = htons(54322);
+    bind(sockMulticast, (struct sockaddr *) &servMulticAddr, sizeof (servMulticAddr));
+
+	
+	
     cout << "Servidor iniciado\n\n";
     char res[32] = {0};
     while (true) {
 
         len = sizeof (cliaddr);
-        n = recvfrom(sockfd, mesg, 1000, 0, (struct sockaddr *) &cliaddr, &len);
-
+        n = recvfrom(sockUnicast, mesg, 1024, 0, (struct sockaddr *) &cliaddr, &len);
+		
+		// Envíó para multicast
+		sendto(sockMulticast, mesg, n, 0, (struct sockaddr *) &servMulticAddr, sizeof(servMulticAddr));
+		
         if (esLogin()) {
             if (apodoDisponible()) {
                 //strcpy(res, "");
-                cout << "Nombre disponible" << endl; //nombre disponible
-                strcpy(res, "OK");
+                cout << "Nombre disponible" << endl;
+                strncpy(res, "OK\0", sizeof(res));
+				sendto(sockUnicast, res, sizeof(res), 0, (struct sockaddr *) &cliaddr, sizeof (cliaddr));
             } else {
-                //                strcpy(res, "");
-                cout << "Nombre no disponible" << endl; //nombre no disponible, ya en uso
-                strcpy(res, "NOK");
+                //strcpy(res, "");
+                cout << "Nombre no disponible" << endl;
+                strncpy(res, "NOK\0", sizeof(res));
+				sendto(sockUnicast, res, sizeof(res), 0, (struct sockaddr *) &cliaddr, sizeof (cliaddr));
             }
         } else if (esLogout()) {
-            strcpy(res, "GOODBYE");
+			//strcpy(res, "");
+            strncpy(res, "GOODBYE\0", sizeof(res));
+			sendto(sockUnicast, res, sizeof(res), 0, (struct sockaddr *) &cliaddr, sizeof (cliaddr));
         }
 
-        sendto(sockfd, res, n, 0, (struct sockaddr *) &cliaddr, sizeof (cliaddr));
+        
         mesg[n] = 0;
         cout << "Mensaje recibido:\n";
         cout << mesg;

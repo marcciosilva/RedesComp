@@ -52,13 +52,13 @@ public class ListadoUsuarios extends Thread {
 			socketCliente.receive(paquete);
 		} catch (IOException ex) {
 			Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-			JOptionPane.showMessageDialog(jTextAreaChat.getParent(), "Error! No se ha recibido una respuesta del servidor", "Error", JOptionPane.INFORMATION_MESSAGE);
+			JOptionPane.showMessageDialog(jTextAreaChat.getParent(), "Atención! No se ha recibido una respuesta del servidor", "Error", JOptionPane.INFORMATION_MESSAGE);
 		}
 
 		String mensajeRecibido = new String(paquete.getData(), 0, paquete.getLength());
 
 		synchronized (jTextAreaChat) {
-			jTextAreaChat.append(mensajeRecibido);
+			jTextAreaChat.append("Usuarios conectados:\n\n" + mensajeRecibido + "\n");
 		}
 
 	}
