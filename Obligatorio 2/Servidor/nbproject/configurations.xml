@@ -13,7 +13,9 @@
                    displayName="Source Files"
                    projectFiles="true">
       <logicalFolder name="src" displayName="src" projectFiles="true">
+        <itemPath>src/cliente.cpp</itemPath>
         <itemPath>src/main.cpp</itemPath>
+        <itemPath>src/servidor.cpp</itemPath>
       </logicalFolder>
     </logicalFolder>
     <logicalFolder name="TestFiles"
@@ -67,7 +69,11 @@
           <developmentMode>5</developmentMode>
         </asmTool>
       </compileType>
+      <item path="src/cliente.cpp" ex="false" tool="1" flavor2="0">
+      </item>
       <item path="src/main.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/servidor.cpp" ex="false" tool="1" flavor2="0">
       </item>
     </conf>
   </confs>
