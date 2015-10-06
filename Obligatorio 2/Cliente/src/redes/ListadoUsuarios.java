@@ -16,6 +16,7 @@ public class ListadoUsuarios extends Thread {
 	private final JTextArea jTextAreaChat;
 	private DatagramSocket socketCliente;
 	private byte[] dataOut = new byte[PACKETSIZE];
+        private final static int TIMEOUT = 2000;
 	private final InetAddress serverIP;
 	private final int serverPort;
 
@@ -48,7 +49,7 @@ public class ListadoUsuarios extends Thread {
 		// Espero por una respuesta con timeout de 2 segundos
 		try {
 			paquete.setData(new byte[PACKETSIZE]);
-			socketCliente.setSoTimeout(2000);
+			socketCliente.setSoTimeout(TIMEOUT);
 			socketCliente.receive(paquete);
 		} catch (IOException ex) {
 			Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);

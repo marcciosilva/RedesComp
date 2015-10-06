@@ -44,7 +44,6 @@ public class Cliente extends javax.swing.JFrame {
 		if (socketUnicast != null && !socketUnicast.isClosed()) {
 			socketUnicast.close();
 		}
-		
 		// Cierro el socket multicast
 		// Por alguna razón tira varias excepciones socketCLosed, aunque el 
 		// listenerThread ya no existe se supone. Así que no entiendo. Igual no genera ningún problema.
@@ -310,7 +309,7 @@ public class Cliente extends javax.swing.JFrame {
 		// Espero por una respuesta con timeout de 2 segundos
 		try {
 			paquete.setData(new byte[PACKETSIZE]);
-			socketUnicast.setSoTimeout(2000);
+			socketUnicast.setSoTimeout(TIMEOUT);
 			socketUnicast.receive(paquete);
 		} catch (IOException e) {
 			System.err.println(e.toString());
@@ -377,6 +376,7 @@ public class Cliente extends javax.swing.JFrame {
 	}
 
 	public final static int PACKETSIZE = 65536;
+        private final static int TIMEOUT = 2000;
 	private int serverPort; // El puerto donde corre el servidor. Se lee desde la interfaz
 	private InetAddress serverIP; // La IP donde corre el servidor. Se lee desde la interfaz
 	private DatagramSocket socketUnicast; // El socket para recibir y enviar mansajes unicast.

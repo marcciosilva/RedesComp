@@ -37,7 +37,6 @@ public class Listener implements Runnable {
 			multicastIP = InetAddress.getByName(strMulticastIP);
 			socketMulticast = new MulticastSocket(multicastPort);
 			socketMulticast.joinGroup(multicastIP);
-
 			// Loop
 			while (true) {
 				try {

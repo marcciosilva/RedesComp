@@ -10,6 +10,8 @@
 #include <sys/types.h>
 #include <regex.h>
 #include <unistd.h>
+#include <time.h>
+
 
 #define MAXBUFSIZE 65536 // Max UDP Packet size is 64 Kbyte
 
@@ -20,7 +22,11 @@ int sockUnicast, n;
 struct sockaddr_in servUnicAddr, cliaddr, servMulticAddr;
 socklen_t len;
 char mesg[MAXBUFSIZE];
-
+//para mostrar
+int clientesOn = 0;
+int mensajes = 0;
+int conexiones = 0;
+int timepoEjecucion = 0;
 // Multicast
 int sockMulticast, status, socklen;
 struct sockaddr_in saddr;
@@ -147,9 +153,20 @@ bool esLogout() {
 	}
 }
 
+void tiempoEjecucion(clock_t start, clock_t diff){
+    //devuleve siempre 0 -mirar-
+    diff = clock() - start;
+    int msec = diff * 1000 / CLOCKS_PER_SEC;
+    cout << "Time taken ";
+    cout << msec/1000;
+    cout << " seconds ";
+    cout << msec%1000;
+    cout << " milliseconds\n\n";
+}
+
 int main(int argc, char**argv) {
 
-
+        clock_t start = clock(), diff;
 	sockUnicast = socket(AF_INET, SOCK_DGRAM, 0);
 
 	servUnicAddr.sin_family = AF_INET;
@@ -203,14 +220,17 @@ int main(int argc, char**argv) {
 	//servMulticAddr.sin_addr.s_addr = inet_addr("225.5.4.3");
 	//servMulticAddr.sin_port = htons(54322);
 	//bind(sockMulticast, (struct sockaddr *) &servMulticAddr, sizeof (servMulticAddr));
-
+        
+        
+        
 	cout << "Servidor iniciado\n\n";
 	char res[32] = {0};
+        
+       
 	while (true) {
 
 		len = sizeof (cliaddr);
 		n = recvfrom(sockUnicast, mesg, MAXBUFSIZE, 0, (struct sockaddr *) &cliaddr, &len);
-
 		// Envíó para multicast
 		socklen = sizeof (struct sockaddr_in);
 		sendto(sockMulticast, mesg, strlen(mesg), 0, (struct sockaddr *) &saddr, socklen);
@@ -221,6 +241,8 @@ int main(int argc, char**argv) {
 				cout << "Nombre disponible" << endl;
 				strncpy(res, "OK\0", sizeof (res));
 				sendto(sockUnicast, res, sizeof (res), 0, (struct sockaddr *) &cliaddr, sizeof (cliaddr));
+                                clientesOn++;
+                                conexiones++;
 			} else {
 				//strcpy(res, "");
 				cout << "Nombre no disponible" << endl;
@@ -231,9 +253,9 @@ int main(int argc, char**argv) {
 			//strcpy(res, "");
 			strncpy(res, "GOODBYE\0", sizeof (res));
 			sendto(sockUnicast, res, sizeof (res), 0, (struct sockaddr *) &cliaddr, sizeof (cliaddr));
+                        clientesOn--;
 		}
-
-
+                
 		mesg[n] = 0;
 		cout << "Mensaje recibido:\n";
 		cout << mesg;
@@ -241,6 +263,7 @@ int main(int argc, char**argv) {
 	}
 
 	// shutdown socket
+        
 	shutdown(sockMulticast, 2);
 	close(sockMulticast);
 }
