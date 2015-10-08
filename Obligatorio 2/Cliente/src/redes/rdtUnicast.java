@@ -11,7 +11,8 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -32,7 +33,7 @@ public class rdtUnicast {
     private DatagramSocket socketUnicast;
     DatagramPacket paquete;
     DatagramPacket sndpkt;
-    Set <DatagramPacket> buffer = new HashSet(); // cambiar - algo acotado
+    Queue<DatagramPacket> buffer = new LinkedList<DatagramPacket>();
     
     //Emisor
      private enum EstadoSender {
@@ -115,7 +116,9 @@ public class rdtUnicast {
     }
     
     public void rdt_send(String msj, InetAddress serverIP, int serverPort) {
-
+                // hay que ver que se hace si me llega un mensaje privado mientras
+                // estoy aca -lo guardo en un buffer?
+                // y en el rdt_recieve antes de hacer nada que se fije si tiene cosas en ese buffer?
         data = msj.getBytes();
         try{
             boolean salir = false;
@@ -141,6 +144,9 @@ public class rdtUnicast {
                         estadoS = EstadoSender.ESPERO_DATA_1;  
                         salir = true;
                         pasoSender = 1;
+                        
+                    }else if(is_not_ACK(in_pck)){ //me llego un mensaje privado del servidor, lo mando al buche
+                        buffer.add(in_pck);
                     } 
                     
                 }else if (estadoS == EstadoSender.ESPERO_DATA_1){
@@ -163,6 +169,9 @@ public class rdtUnicast {
                         estadoS = EstadoSender.ESPERO_DATA_1;  
                         salir = true;
                         pasoSender = 0;
+                        
+                    }else if(is_not_ACK(in_pck)){ //me llego un mensaje privado del servidor, lo mando al buche
+                        buffer.add(in_pck);
                     } 
                 }           
             }
@@ -175,14 +184,16 @@ public class rdtUnicast {
     }
     
     private String rdt_rcv(DatagramPacket rcvpkt) {
+
         boolean salir = false;
         String strMensaje = null;
         while (!salir) {
-            //hasta que no me llegue algo válido para pasarle a la
-            //"capa de aplicación", me quedo acá
             try {
-                socketUnicast.receive(rcvpkt);
-
+                if (buffer.isEmpty()){ //no tengo ningun mensaje privado guardado sin procesar
+                    socketUnicast.receive(rcvpkt);
+                }else{
+                    rcvpkt = buffer.remove();
+                }
                 byte[] bytes = rcvpkt.getData();
                 //extraigo el header para manipularlo bitwise
                 byte header = bytes[0];
@@ -190,20 +201,13 @@ public class rdtUnicast {
                 byte[] data = Arrays.copyOfRange(bytes, 1, bytes.length - 1);
                 strMensaje = new String(data, 0, data.length);
                 if (estadoR == EstadoReceiver.ESPERO_DATA_0) {
-                    if (buffer.contains(rcvpkt)){
-                        pasoReceiver = 1;
-                        salir = true;
-                        estadoR = EstadoReceiver.ESPERO_DATA_1;
-                        
-                    }else if (is_not_ACK(rcvpkt) && has_seq1(rcvpkt)) {
-                        //me llega un paquete "adelantado", lo guardo y sigo esperando por el anterior
-                        buffer.add(rcvpkt);
+                    if (is_not_ACK(rcvpkt) && has_seq1(rcvpkt)) {
                         sndpkt = makepkt(true, 1);
                         socketUnicast.send(sndpkt);
                     } else if (is_not_ACK(rcvpkt) && has_seq0(rcvpkt)) {
                         //me llega lo que estoy esperando del servidor
                         sndpkt = makepkt(true, 0);
-                        //broadcasteo el acknowledge
+                            //broadcasteo el acknowledge
                         //si le llega a otro usuario, simplemente lo ignora
                         socketUnicast.send(sndpkt);
                         pasoReceiver = 1;
@@ -211,20 +215,18 @@ public class rdtUnicast {
                         estadoR = EstadoReceiver.ESPERO_DATA_1;
                     }
                 } else if (estadoR == EstadoReceiver.ESPERO_DATA_1) {
-                    if (buffer.contains(rcvpkt)){
+                    if (buffer.contains(rcvpkt)) {
                         pasoReceiver = 0;
                         salir = true;
                         estadoR = EstadoReceiver.ESPERO_DATA_0;
-                        
-                    }else if (is_not_ACK(rcvpkt) && has_seq0(rcvpkt)) {
-                        //me llega un paquete "adelantado", lo guardo y sigo esperando por el anterior
-                        buffer.add(rcvpkt);
-                        sndpkt = makepkt(true, 1);
+
+                    } else if (is_not_ACK(rcvpkt) && has_seq0(rcvpkt)) {
+                        sndpkt = makepkt(true, 0);
                         socketUnicast.send(sndpkt);
                     } else if (is_not_ACK(rcvpkt) && has_seq1(rcvpkt)) {
                         //me llega lo que estoy esperando del servidor
                         sndpkt = makepkt(true, 0);
-                        //broadcasteo el acknowledge
+                            //broadcasteo el acknowledge
                         //si le llega a otro usuario, simplemente lo ignora
                         socketUnicast.send(sndpkt);
                         pasoReceiver = 1;
