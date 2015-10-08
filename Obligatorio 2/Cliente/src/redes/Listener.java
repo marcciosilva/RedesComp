@@ -122,6 +122,7 @@ public class Listener implements Runnable {
                         socketMulticast.send(sndpkt);
                         paso = 1;
                         salir = true;
+                        estado = Estado.ESPERO_1;
                     }
                 } else if (estado == Estado.ESPERO_1) {
                     if (is_not_ACK(rcvpkt) && has_seq0(rcvpkt)) {
@@ -131,6 +132,7 @@ public class Listener implements Runnable {
                         sndpkt = makepkt(true, 1);
                         socketMulticast.send(sndpkt);
                         salir = true;
+                        estado = Estado.ESPERO_0;
                     }
                 }
             } catch (IOException ex) {
