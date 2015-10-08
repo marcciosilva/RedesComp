@@ -12,6 +12,7 @@
 
 // Multi-threading
 #include <pthread.h>
+#include <thread>
 #include <mutex>
 
 using namespace std;
@@ -67,7 +68,7 @@ unsigned char one = 1;
 int sockUnicast;
 struct sockaddr_in servUnicAddr, unic_cliaddr;
 
-void multicastSocket_setUp(){
+void multicastSocket_setUp() {
 	// Creo el socket UDP
 	memset(&servMulticAddr, 0, sizeof (struct sockaddr_in));
 	sockMulticast = socket(PF_INET, SOCK_DGRAM, 0);
@@ -97,7 +98,7 @@ void multicastSocket_setUp(){
 	servMulticAddr.sin_port = htons(6789); // No cambiar! Debe ser el mismo que use el cliente para recibir
 }
 
-void unicastSocket_setUp(){
+void unicastSocket_setUp() {
 	sockUnicast = socket(AF_INET, SOCK_DGRAM, 0);
 	servUnicAddr.sin_family = AF_INET;
 	servUnicAddr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -158,33 +159,33 @@ void deliver_message(char* msj, in_addr ip, in_port_t puerto) {
 
 	} else if (strcmp(commando, "MESSAGE") == 0) {
 		// Hacer multicast del mensaje
-		
+
 		// Creo el cabezal
 		string cabezal = "RELAYED_MESSAGE ";
 		char * cabezal_ptr = new char[MAX_MESSAGE_LENGHT];
 		strcpy(cabezal_ptr, cabezal.c_str());
-		
+
 		// Obtengo el mensaje del msj recibido
 		char * mensaje = strchr(msj, ' ');
-		
+
 		// concateno ambos
 		strcat(cabezal_ptr, mensaje);
 
 		// Envío
 		rdt_broadcast(cabezal_ptr);
 		//thread t1(rdt_broadcast, cabezal_ptr);
-		
+
 	} else if (strcmp(commando, "PRIVATE_MESSAGE") == 0) {
 		// Enviar por unicast el mensaje
-		
+
 		// Creo el cabezal
 		string cabezal = "PRIVATE_MESSAGE ";
 		char * cabezal_ptr = new char[MAX_MESSAGE_LENGHT];
 		strcpy(cabezal_ptr, cabezal.c_str());
-		
+
 		// Obtengo el mensaje del msj recibido
 		char * mensaje = strchr(msj, ' ');
-		
+
 		// concateno ambos
 		strcat(cabezal_ptr, mensaje);
 
@@ -193,9 +194,34 @@ void deliver_message(char* msj, in_addr ip, in_port_t puerto) {
 	}
 };
 
+void rdt_rcv_unicast() {
+	char buffer[MAX_PACKET_SIZE];
+	while (true) {
+		recvfrom(sockUnicast, buffer, MAX_PACKET_SIZE, 0, (struct sockaddr *) &unic_cliaddr, (unsigned int*) sizeof (unic_cliaddr));
+		char* temp = buffer;
+		std::thread t1(deliver_message, temp, unic_cliaddr.sin_addr, unic_cliaddr.sin_port);
+	}
+}
+
+void rdt_rcv_multicast() {
+	char buffer[MAX_PACKET_SIZE];
+	while (true) {
+		recvfrom(sockMulticast, buffer, MAX_PACKET_SIZE, 0, (struct sockaddr *) &servMulticAddr, (unsigned int*) sizeof (servMulticAddr));
+		char* temp = buffer;
+		//std::thread t1(deliver_message, temp, unic_cliaddr.sin_addr, unic_cliaddr.sin_port);
+	}
+}
+
 int main(int argc, char** argv) {
 	unicastSocket_setUp();
 	multicastSocket_setUp();
+
+	// Inicio threads
+	std::thread th1(rdt_rcv_unicast);
+	std::thread th2(rdt_rcv_multicast);
+	
+	th1.join();
+	th2.join();
 
 	return 0;
 }
