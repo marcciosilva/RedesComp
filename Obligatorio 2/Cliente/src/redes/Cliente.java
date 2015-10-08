@@ -251,7 +251,7 @@ public class Cliente extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(this, "Error! No se pudo abrir un puerto para la conección", "Cliente", JOptionPane.INFORMATION_MESSAGE);
             }
 
-            String msj = "LOGIN" + apodo + "\n";
+            String msj = "LOGIN " + apodo + "\n";
             rdt_send(msj);
             String respuesta = rdt_rcv();
 
@@ -314,12 +314,11 @@ public class Cliente extends javax.swing.JFrame {
 
     private void jButtonEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEnviarActionPerformed
         // Obtengo el chatMsj a ser enviado
-        String chatMsj = jTextFieldMensaje.getText();
+        String msj = jTextFieldMensaje.getText();
 
         // Me fijo si ingresó texto
-        if (!chatMsj.isEmpty()) {
+        if (!msj.isEmpty()) {
             // Creo y envío el mensaje
-            String msj = "LOGOUT\n";
             rdt_send(msj);
         }
 
