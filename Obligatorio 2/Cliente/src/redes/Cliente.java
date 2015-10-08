@@ -199,8 +199,8 @@ public class Cliente extends javax.swing.JFrame {
 
     private String rdt_rcv() {
         try {
-            DatagramPacket paquete = new DatagramPacket(null, 0, serverIP, serverPort);
-            paquete.setData(new byte[PACKETSIZE]); //length se setea automáticamente
+            byte[] data = new byte[PACKETSIZE];
+            DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
             // Espero por una respuesta con timeout de 2 segundos
             socketUnicast.setSoTimeout(2000);
             socketUnicast.receive(paquete);
