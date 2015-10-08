@@ -5,6 +5,7 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -27,6 +28,7 @@ public class Listener implements Runnable {
     private Estado estado;
     int paso;
     DatagramPacket sndpkt; //ultimo paquete enviado
+    private boolean confiabilidad = false;
 
     Listener() {
     }
@@ -39,77 +41,64 @@ public class Listener implements Runnable {
 
     private boolean is_not_ACK(DatagramPacket rcvpkt) {
         //devuelve true si el paquete no es un acknowledge
-        //matcheo el cabezal y el resto no interesa
-        Pattern pattern = Pattern.compile("/RDT/(\\d)-\\d/RDT/.*");
-        String strMensaje = new String(rcvpkt.getData(), 0, rcvpkt.getLength());
-        Matcher matcher = pattern.matcher(strMensaje);
-        if (matcher.matches()) {
-            String ack = matcher.group(1);
-            return (ack.equals("0"));
-        } else {
-            throw new IllegalArgumentException("El paquete no tenía un cabezal RDT correcto");
-        }
+        byte[] bytes = rcvpkt.getData();
+        byte header = bytes[0];
+        int isAck = (int) header & 0x80; //mask 10000000
+        //devuelvo true si el bit estaba apagado
+        return isAck == 0;
     }
 
-    private boolean is_ACK(DatagramPacket rcvpkt, int num) {
-        //devuelve true si el paquete es un acknowledge
-        //con numero de secuencia num
-        //matcheo el cabezal y el resto no interesa
-        Pattern pattern = Pattern.compile("/RDT/(\\d)-(\\d)/RDT/.*");
-        String strMensaje = new String(rcvpkt.getData(), 0, rcvpkt.getLength());
-        Matcher matcher = pattern.matcher(strMensaje);
-        if (matcher.matches()) {
-            String ack = matcher.group(1);
-            String seqNum = matcher.group(2);
-            return (ack.equals("1") && seqNum.equals(String.valueOf(num)));
-        } else {
-            throw new IllegalArgumentException("El paquete no tenía un cabezal RDT correcto");
-        }
+    private boolean has_seq1(DatagramPacket rcvpkt) {
+        //devuelve true si el numero de secuencia del paquete coincide con 1
+        byte[] bytes = rcvpkt.getData();
+        byte header = bytes[0];
+        int seqNum = (int) header & 0x7f;
+        return seqNum == 1;
     }
 
-    private boolean has_seq(DatagramPacket rcvpkt, int num) {
-        //devuelve true si el numero de secuencia del paquete coincide con num
-        Pattern pattern = Pattern.compile("/RDT/\\d-(\\d)/RDT/.*");
-        String strMensaje = new String(rcvpkt.getData(), 0, rcvpkt.getLength());
-        Matcher matcher = pattern.matcher(strMensaje);
-        if (matcher.matches()) {
-            String seqNum = matcher.group(1);
-            return (seqNum.equals(String.valueOf(num)));
-        } else {
-            throw new IllegalArgumentException("El paquete no tenía un cabezal RDT correcto");
-        }
+    private boolean has_seq0(DatagramPacket rcvpkt) {
+        //devuelve true si el numero de secuencia del paquete coincide con 0
+        byte[] bytes = rcvpkt.getData();
+        byte header = bytes[0];
+        int seqNum = (int) header & 0x7f;
+        return seqNum == 0;
     }
 
     private DatagramPacket makepkt(boolean is_ACK, int seqNum) {
         //armar paquete de acknowledge con numero de secuencia igual
         //a seqNum
-        //TODO
-        //el string va a ser /RDT/ackbit-seqnum/RDT/, donde ackbit y seqnum son 0 o 1
-        String ackString;
+        byte header = (byte) seqNum;
         if (is_ACK) {
-            ackString = "1";
+            header = (byte) (header & 0xff);
         } else {
-            ackString = "0";
+            header = (byte) (header & 0x7f);
         }
-        String mensajeString = "/RDT/" + ackString + "-" + String.valueOf(seqNum) + "/RDT/";
-        byte[] mensaje = mensajeString.getBytes();
-        return new DatagramPacket(mensaje, mensaje.length);
+        byte bytes[] = {header};
+        return new DatagramPacket(bytes, bytes.length);
     }
 
-    private void rdt_rcv(DatagramPacket rcvpkt) {
+    private String rdt_rcv(DatagramPacket rcvpkt) {
         boolean salir = false;
+        String strMensaje = null;
         while (!salir) {
             //hasta que no me llegue algo válido para pasarle a la
             //"capa de aplicación", me quedo acá
             try {
                 socketMulticast.receive(rcvpkt);
+
+                byte[] bytes = rcvpkt.getData();
+                //extraigo el header para manipularlo bitwise
+                byte header = bytes[0];
+                //extraigo la data y creo un string a partir de ella
+                byte[] data = Arrays.copyOfRange(bytes, 1, bytes.length - 1);
+                strMensaje = new String(data, 0, data.length);
                 if (estado == Estado.ESPERO_0) {
-                    if (is_not_ACK(rcvpkt) && has_seq(rcvpkt, 1)
+                    if (is_not_ACK(rcvpkt) && has_seq1(rcvpkt)
                             && paso == 1) {
                         //reenvio el mensaje de ACK anterior
                         //únicamente se reenvian acknowledges desde el cliente
                         socketMulticast.send(sndpkt);
-                    } else if (is_not_ACK(rcvpkt) && has_seq(rcvpkt, 0)) {
+                    } else if (is_not_ACK(rcvpkt) && has_seq0(rcvpkt)) {
                         //me llega lo que estoy esperando del servidor
                         sndpkt = makepkt(true, 0);
                         //broadcasteo el acknowledge
@@ -117,21 +106,24 @@ public class Listener implements Runnable {
                         socketMulticast.send(sndpkt);
                         paso = 1;
                         salir = true;
+                        estado = Estado.ESPERO_1;
                     }
                 } else if (estado == Estado.ESPERO_1) {
-                    if (is_not_ACK(rcvpkt) && has_seq(rcvpkt, 0)) {
-                        //broadcasteo el paquete anterior
+                    if (is_not_ACK(rcvpkt) && has_seq0(rcvpkt)) {
+                        //broadcasteo el paquete ACK anterior
                         socketMulticast.send(sndpkt);
-                    } else if (is_not_ACK(rcvpkt) && has_seq(rcvpkt, 1)) {
+                    } else if (is_not_ACK(rcvpkt) && has_seq1(rcvpkt)) {
                         sndpkt = makepkt(true, 1);
                         socketMulticast.send(sndpkt);
                         salir = true;
+                        estado = Estado.ESPERO_0;
                     }
                 }
             } catch (IOException ex) {
                 Logger.getLogger(Listener.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
+        return strMensaje;
     }
 
     @Override
@@ -151,9 +143,15 @@ public class Listener implements Runnable {
             // Loop
             while (true) {
                 DatagramPacket paquete = new DatagramPacket(mensaje, mensaje.length);
-                //recibo mensaje de capa de transporte artificial (con confiabilidad)
-                rdt_rcv(paquete);
-                String strMensaje = new String(paquete.getData(), 0, paquete.getLength());
+                String strMensaje;
+                //variable booleana para determinar si usar rdt o no
+                if (confiabilidad) {
+                    //recibo mensaje de capa de transporte artificial (con confiabilidad)
+                    strMensaje = rdt_rcv(paquete);
+                } else {
+                    socketMulticast.receive(paquete);
+                    strMensaje = new String(paquete.getData(), 0, paquete.getLength());
+                }
                 // Se debe parsear el datagrama para obtener el apodo y el mensaje por separado
                 // para mostrarlos en el area de chat.
                 updateChat(strMensaje, true, false);
