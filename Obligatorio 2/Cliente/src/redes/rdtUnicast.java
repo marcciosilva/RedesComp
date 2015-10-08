@@ -10,6 +10,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -21,7 +22,7 @@ import static redes.Cliente.PACKETSIZE;
  * @author User
  */
 public class rdtUnicast {
-    
+    public final static int PACKETSIZE = 65536;
     private int serverPort;
     private byte[] mensaje = new byte[PACKETSIZE];
     private InetAddress serverIP;
@@ -33,66 +34,53 @@ public class rdtUnicast {
     }
     private Estado estado = Estado.ESPERO_DATA_0;
     int paso = 0;
-    DatagramPacket sndpkt; //ultimo paquete enviado
+    boolean timeout0 = false;
+    boolean timeout1 = false;
     
     
     private boolean is_not_ACK(DatagramPacket rcvpkt) {
         //devuelve true si el paquete no es un acknowledge
-        //matcheo el cabezal y el resto no interesa
-        Pattern pattern = Pattern.compile("/RDT/(\\d)-\\d/RDT/.*");
-        String strMensaje = new String(rcvpkt.getData(), 0, rcvpkt.getLength());
-        Matcher matcher = pattern.matcher(strMensaje);
-        if (matcher.matches()) {
-            String ack = matcher.group(1);
-            return (ack.equals("0"));
-        } else {
-            throw new IllegalArgumentException("El paquete no tenía un cabezal RDT correcto");
-        }
+        byte[] bytes = rcvpkt.getData();
+        byte header = bytes[0];
+        int isAck = (int) header & 0x80; //mask 10000000
+        //devuelvo true si el bit estaba apagado
+        return isAck == 0;
     }
-
-    private boolean is_ACK(DatagramPacket rcvpkt, int num) {
+    private boolean is_ACK(DatagramPacket rcvpkt) {
         //devuelve true si el paquete es un acknowledge
-        //con numero de secuencia num
-        //matcheo el cabezal y el resto no interesa
-        Pattern pattern = Pattern.compile("/RDT/(\\d)-(\\d)/RDT/.*");
-        String strMensaje = new String(rcvpkt.getData(), 0, rcvpkt.getLength());
-        Matcher matcher = pattern.matcher(strMensaje);
-        if (matcher.matches()) {
-            String ack = matcher.group(1);
-            String seqNum = matcher.group(2);
-            return (ack.equals("1") && seqNum.equals(String.valueOf(num)));
-        } else {
-            throw new IllegalArgumentException("El paquete no tenía un cabezal RDT correcto");
-        }
+        byte[] bytes = rcvpkt.getData();
+        byte header = bytes[0];
+        int isAck = (int) header & 0x80; //mask 10000000
+        //devuelvo true si el bit estaba prendido
+        return isAck == 1;
+    }
+    private boolean has_seq1(DatagramPacket rcvpkt) {
+        //devuelve true si el numero de secuencia del paquete coincide con 1
+        byte[] bytes = rcvpkt.getData();
+        byte header = bytes[0];
+        int seqNum = (int) header & 0x7f;
+        return seqNum == 1;
     }
 
-    private boolean has_seq(DatagramPacket rcvpkt, int num) {
-        //devuelve true si el numero de secuencia del paquete coincide con num
-        Pattern pattern = Pattern.compile("/RDT/\\d-(\\d)/RDT/.*");
-        String strMensaje = new String(rcvpkt.getData(), 0, rcvpkt.getLength());
-        Matcher matcher = pattern.matcher(strMensaje);
-        if (matcher.matches()) {
-            String seqNum = matcher.group(1);
-            return (seqNum.equals(String.valueOf(num)));
-        } else {
-            throw new IllegalArgumentException("El paquete no tenía un cabezal RDT correcto");
-        }
+    private boolean has_seq0(DatagramPacket rcvpkt) {
+        //devuelve true si el numero de secuencia del paquete coincide con 0
+        byte[] bytes = rcvpkt.getData();
+        byte header = bytes[0];
+        int seqNum = (int) header & 0x7f;
+        return seqNum == 0;
     }
 
     private DatagramPacket makepkt(boolean is_ACK, int seqNum) {
         //armar paquete de acknowledge con numero de secuencia igual
         //a seqNum
-        //TODO
-        //el string va a ser /RDT/ackbit-seqnum/RDT/, donde ackbit y seqnum son 0 o 1
-        String ackString;
+        byte header = (byte) seqNum;
         if (is_ACK) {
-            ackString = "1";
+            header = (byte) (header & 0xff);
         } else {
-            ackString = "0";
+            header = (byte) (header & 0x7f);
         }
-        String mensajeString = "/RDT/" + ackString + "-" + String.valueOf(seqNum) + "/RDT/";
-        byte[] mensaje = mensajeString.getBytes();
-        return new DatagramPacket(mensaje, mensaje.length);
+        byte bytes[] = {header};
+        return new DatagramPacket(bytes, bytes.length);
     }
 
     public void rdt_send(DatagramPacket paquete) {
@@ -100,16 +88,56 @@ public class rdtUnicast {
 
                 //serverIP = paquete.getAddress();
                 //serverPort = paquete.getPort();
-        boolean salir = false;
-        while (!salir) {
-            
-            if (estado == Estado.ESPERO_DATA_0){
-                
-            
+        try{
+            boolean salir = false;
+            while (!salir) {
+
+                if (estado == Estado.ESPERO_DATA_0){
+                    // creo paquete para enviar a partir del string con numero de secuencia 0
+                    socketUnicast.send(paquete);
+                    //start timer de 0
+                    estado = Estado.ESPERO_ACK_0;
+
+                }else if (estado == Estado.ESPERO_ACK_0){
+                    DatagramPacket in_pck = new DatagramPacket(mensaje, mensaje.length);
+                    socketUnicast.receive(in_pck);
+                    if (timeout0){
+                        // reenvio el paquete
+                        socketUnicast.send(paquete);
+                        //start timer de 0
+                        
+                    }else if (is_ACK(in_pck) && (has_seq0(in_pck))){
+                        // stop timer de 0
+                        estado = Estado.ESPERO_DATA_1;  
+                        salir = true;
+                    } 
+                    
+                }else if (estado == Estado.ESPERO_DATA_1){
+                    // creo paquete para enviar a partir del string con numero de secuencia 1
+                    socketUnicast.send(paquete);
+                    //start timer de 1
+                    estado = Estado.ESPERO_ACK_1;
+                    
+                }else if (estado == Estado.ESPERO_ACK_1){
+                    DatagramPacket in_pck = new DatagramPacket(mensaje, mensaje.length);
+                    socketUnicast.receive(in_pck);
+                    if (timeout0){
+                        // reenvio el paquete
+                        socketUnicast.send(paquete);
+                        //start timer de 1
+                        
+                    }else if (is_ACK(in_pck) && (has_seq1(in_pck))){
+                        // stop timer de 1
+                        estado = Estado.ESPERO_DATA_1;  
+                        salir = true;
+                    } 
+                }           
             }
             
-            
         }
-    }
+        catch (IOException ex) {
+            Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+        }
     
+    }
 }
