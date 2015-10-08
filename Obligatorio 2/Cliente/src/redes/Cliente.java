@@ -68,6 +68,7 @@ public class Cliente extends javax.swing.JFrame {
 
         // Actualizo otros
         jLabelStatus.setText(strDesconectado);
+        conectado = false;
     }
 
     public synchronized static void updateChat(String msj, boolean enable, boolean clear) {
@@ -257,6 +258,7 @@ public class Cliente extends javax.swing.JFrame {
 
             // Proceso la respuesta "OK"/"NOK"
             if (respuesta.equals("OK")) {
+                conectado = true;
                 // Deshabilito
                 jButtonConectar.setEnabled(false);
                 jTextFieldHostIP.setEditable(false);
@@ -274,7 +276,7 @@ public class Cliente extends javax.swing.JFrame {
                 jLabelStatus.setText(strEnLinea);
 
                 // Corro el listener
-                listenerObj = new Listener();
+                listenerObj = new Multicast();
                 listenerThread = new Thread(listenerObj);
                 //listenerThread.setDaemon(true);
                 listenerThread.start();
@@ -337,7 +339,9 @@ public class Cliente extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonListarConectadosActionPerformed
 
     private void cerrandoVentanaEvent(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_cerrandoVentanaEvent
-        terminarConexion();
+        if (conectado) {
+            terminarConexion();
+        }
         this.dispose();
     }//GEN-LAST:event_cerrandoVentanaEvent
 
@@ -359,15 +363,13 @@ public class Cliente extends javax.swing.JFrame {
     private int serverPort; // El puerto donde corre el servidor. Se lee desde la interfaz
     private InetAddress serverIP; // La IP donde corre el servidor. Se lee desde la interfaz
     private DatagramSocket socketUnicast; // El socket para recibir y enviar mansajes unicast.
-
     private final String strDesconectado = "<html><font color='red'>Desconectado</font></html>";
     private final String strEnLinea = "<html><font color='green'>En línea</font></html>";
-
     private byte[] data = new byte[PACKETSIZE]; // El mansaje se manda como byte[], esto es lo que incluye en el paquete
-
+    private boolean conectado = false;
     private String apodo;
     private Thread listenerThread;
-    private Listener listenerObj;
+    private Multicast listenerObj;
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButtonConectar;
     private javax.swing.JButton jButtonDesconectar;

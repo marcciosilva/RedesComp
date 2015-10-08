@@ -13,11 +13,11 @@ import java.util.regex.Pattern;
 import static redes.Cliente.PACKETSIZE;
 import static redes.Cliente.updateChat;
 
-public class Listener implements Runnable {
+public class Multicast implements Runnable {
 
     private InetAddress multicastIP;
     private int multicastPort = 6789; // No cambiar! Debe ser el mismo en el servidor.
-    private byte[] mensaje = new byte[PACKETSIZE];
+//    private byte[] mensaje = new byte[PACKETSIZE];
     private String strMulticastIP = "225.5.4.3";
     private MulticastSocket socketMulticast;
 
@@ -30,7 +30,7 @@ public class Listener implements Runnable {
     DatagramPacket sndpkt; //ultimo paquete enviado
     private boolean confiabilidad = false;
 
-    Listener() {
+    Multicast() {
     }
 
     public void terminarConexion() {
@@ -77,7 +77,7 @@ public class Listener implements Runnable {
         return new DatagramPacket(bytes, bytes.length);
     }
 
-    private String rdt_rcv(DatagramPacket rcvpkt) {
+    private void rdt_rcv(DatagramPacket rcvpkt) {
         boolean salir = false;
         String strMensaje = null;
         while (!salir) {
@@ -87,8 +87,8 @@ public class Listener implements Runnable {
                 socketMulticast.receive(rcvpkt);
 
                 byte[] bytes = rcvpkt.getData();
-                //extraigo el header para manipularlo bitwise
-                byte header = bytes[0];
+//                //extraigo el header para manipularlo bitwise
+//                byte header = bytes[0];
                 //extraigo la data y creo un string a partir de ella
                 byte[] data = Arrays.copyOfRange(bytes, 1, bytes.length - 1);
                 strMensaje = new String(data, 0, data.length);
@@ -120,10 +120,11 @@ public class Listener implements Runnable {
                     }
                 }
             } catch (IOException ex) {
-                Logger.getLogger(Listener.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Multicast.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-        return strMensaje;
+        //genero un thread de DataSend con el mensaje que extraje del paquete
+        (new DataSend(strMensaje)).start();
     }
 
     @Override
@@ -142,19 +143,20 @@ public class Listener implements Runnable {
             socketMulticast.joinGroup(multicastIP);
             // Loop
             while (true) {
-                DatagramPacket paquete = new DatagramPacket(mensaje, mensaje.length);
-                String strMensaje;
+                byte[] buffer = new byte[PACKETSIZE];
+                DatagramPacket paquete = new DatagramPacket(buffer, buffer.length);
                 //variable booleana para determinar si usar rdt o no
                 if (confiabilidad) {
                     //recibo mensaje de capa de transporte artificial (con confiabilidad)
-                    strMensaje = rdt_rcv(paquete);
+                    rdt_rcv(paquete);
                 } else {
+                    String strMensaje;
                     socketMulticast.receive(paquete);
                     strMensaje = new String(paquete.getData(), 0, paquete.getLength());
+                    // Se debe parsear el datagrama para obtener el apodo y el mensaje por separado
+                    // para mostrarlos en el area de chat.
+                    updateChat(strMensaje, true, false);
                 }
-                // Se debe parsear el datagrama para obtener el apodo y el mensaje por separado
-                // para mostrarlos en el area de chat.
-                updateChat(strMensaje, true, false);
             }
         } catch (UnknownHostException ex) {
             Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);

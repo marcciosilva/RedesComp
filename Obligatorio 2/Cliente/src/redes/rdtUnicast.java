@@ -235,7 +235,7 @@ public class rdtUnicast {
                     }
                 }
             } catch (IOException ex) {
-                Logger.getLogger(Listener.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Multicast.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
         return strMensaje;
