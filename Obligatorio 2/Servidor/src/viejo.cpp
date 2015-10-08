@@ -17,33 +17,18 @@ using namespace std;
 
 map<string, struct sockaddr_in> clientes;
 int sockUnicast, n;
-struct sockaddr_in servUnicAddr, cliaddr, servMulticAddr;
+struct sockaddr_in servUnicAddr, cliaddr;
 socklen_t len;
 char mesg[MAXBUFSIZE];
 
 // Multicast
 int sockMulticast, status, socklen;
-struct sockaddr_in saddr;
+struct sockaddr_in servMulticAddr;
 struct in_addr iaddr;
 unsigned char ttl = 5;
 unsigned char one = 1;
 
-/*
- * Comandos de cliente al servidor
-	LOGIN <usuario><CR>
-	LOGOUT<CR>
-	GET_CONNECTED<CR>
-	MESSAGE <msg><CR>
-	PRIVATE_MESSAGE <receptor> <msg><CR>
-
- * Comandos del servidor al cliente:
-	RELAYED_MESSAGE <emisor> <msg><CR>
-	PRIVATE_MESSAGE <emisor> <msg><CR>
-	CONNECTED <usr1>[|<usr2>...]<CR>
-	GOODBYE<CR>
- */
-
-bool esLogin(string msj) {
+bool esLogin() {
 	const char* regexpLogin = "LOGIN";
 	//distingo entre tipos de mensaje
 	int i = 0;
@@ -73,7 +58,7 @@ bool esLogin(string msj) {
 	return true;
 }
 
-bool esLogout(string msj) {
+bool esLogout() {
 	const char* regexpLogin = "LOGOUT\n";
 	//distingo entre tipos de mensaje
 	int i = 0;
@@ -120,15 +105,15 @@ bool esLogout(string msj) {
 	}
 }
 
-bool esGetConnected(string msj){
+bool esGetConnected(){
 
 }
 
-bool esMessage(string msj){
+bool esMessage(){
 
 }
 
-bool esPrivateMessage(string msj){
+bool esPrivateMessage(){
 
 }
 
@@ -186,7 +171,7 @@ int main(int argc, char**argv) {
 
 	// Multicast
 	// set content of struct saddr and imreq to zero
-	memset(&saddr, 0, sizeof (struct sockaddr_in));
+	memset(&servMulticAddr, 0, sizeof (struct sockaddr_in));
 	memset(&iaddr, 0, sizeof (struct in_addr));
 
 	// open a UDP socket
@@ -194,10 +179,10 @@ int main(int argc, char**argv) {
 	if (sockMulticast < 0)
 		perror("Error creating socket");
 
-	saddr.sin_family = PF_INET;
-	saddr.sin_port = htons(0); // Use the first free port
-	saddr.sin_addr.s_addr = htonl(INADDR_ANY); // bind socket to any interface
-	status = bind(sockMulticast, (struct sockaddr *) &saddr, (socklen_t)sizeof (saddr));
+	servMulticAddr.sin_family = PF_INET;
+	servMulticAddr.sin_port = htons(0); // Use the first free port
+	servMulticAddr.sin_addr.s_addr = htonl(INADDR_ANY); // bind socket to any interface
+	status = bind(sockMulticast, (struct sockaddr *) &servMulticAddr, (socklen_t)sizeof (servMulticAddr));
 
 	if (status < 0)
 		perror("Error binding socket to interface");
@@ -217,9 +202,9 @@ int main(int argc, char**argv) {
 			&one, sizeof (unsigned char));
 
 	// set destination multicast address
-	saddr.sin_family = PF_INET;
-	saddr.sin_addr.s_addr = inet_addr("225.5.4.3");
-	saddr.sin_port = htons(6789); // No cambiar! Debe sre el mismo en el Listener
+	servMulticAddr.sin_family = PF_INET;
+	servMulticAddr.sin_addr.s_addr = inet_addr("225.5.4.3");
+	servMulticAddr.sin_port = htons(6789); // No cambiar! Debe sre el mismo en el Listener
 
 
 
@@ -240,7 +225,7 @@ int main(int argc, char**argv) {
 
 		// Envíó para multicast
 		socklen = sizeof (struct sockaddr_in);
-		sendto(sockMulticast, mesg, strlen(mesg), 0, (struct sockaddr *) &saddr, socklen);
+		sendto(sockMulticast, mesg, strlen(mesg), 0, (struct sockaddr *) &servMulticAddr, socklen);
 
 		if (esLogin()) {
 			if (apodoDisponible()) {

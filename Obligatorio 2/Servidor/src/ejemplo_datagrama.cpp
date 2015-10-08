@@ -1,10 +1,3 @@
-/* 
- * File:   newmain.cpp
- * Author: gaston
- *
- * Created on October 7, 2015, 8:08 PM
- */
-
 #include <cstdlib>
 #include <cstdint>
 #include <string>
@@ -47,6 +40,18 @@ int main(int argc, char** argv) {
 	cout << isACK << endl;
 	cout << seq_num << endl;
 	cout << msj << endl;
+
+	char str[] = "This is a sample string";
+	string mesj = "Hola soy pepito";
+	char * mesj_arr = new char[64];
+	strcpy(mesj_arr, mesj.c_str());
+	string cab = "RELAYED_MESSAGE ";
+	char * cab_arr = new char[64];
+	strcpy(cab_arr, cab.c_str());
+	char* out_msj = new char[64];
+	strcat(out_msj, cab_arr);
+	strcat(out_msj, mesj_arr);
 	
+	cout << endl << out_msj;
 	return 0;
 }
