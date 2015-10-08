@@ -48,22 +48,6 @@ public class Listener implements Runnable {
         return isAck == 0;
     }
 
-    private boolean is_ACK(DatagramPacket rcvpkt, int num) {
-        //devuelve true si el paquete es un acknowledge
-        //con numero de secuencia num
-        //matcheo el cabezal y el resto no interesa
-        Pattern pattern = Pattern.compile("/RDT/(\\d)-(\\d)/RDT/.*");
-        String strMensaje = new String(rcvpkt.getData(), 0, rcvpkt.getLength());
-        Matcher matcher = pattern.matcher(strMensaje);
-        if (matcher.matches()) {
-            String ack = matcher.group(1);
-            String seqNum = matcher.group(2);
-            return (ack.equals("1") && seqNum.equals(String.valueOf(num)));
-        } else {
-            throw new IllegalArgumentException("El paquete no tenía un cabezal RDT correcto");
-        }
-    }
-
     private boolean has_seq1(DatagramPacket rcvpkt) {
         //devuelve true si el numero de secuencia del paquete coincide con 1
         byte[] bytes = rcvpkt.getData();
