@@ -28,8 +28,23 @@ struct in_addr iaddr;
 unsigned char ttl = 5;
 unsigned char one = 1;
 
-bool esLogin() {
-	char* regexpLogin = "LOGIN";
+/*
+ * Comandos de cliente al servidor
+	LOGIN <usuario><CR>
+	LOGOUT<CR>
+	GET_CONNECTED<CR>
+	MESSAGE <msg><CR>
+	PRIVATE_MESSAGE <receptor> <msg><CR>
+
+ * Comandos del servidor al cliente:
+	RELAYED_MESSAGE <emisor> <msg><CR>
+	PRIVATE_MESSAGE <emisor> <msg><CR>
+	CONNECTED <usr1>[|<usr2>...]<CR>
+	GOODBYE<CR>
+ */
+
+bool esLogin(string msj) {
+	const char* regexpLogin = "LOGIN";
 	//distingo entre tipos de mensaje
 	int i = 0;
 	int res;
@@ -58,50 +73,8 @@ bool esLogin() {
 	return true;
 }
 
-bool apodoDisponible() {
-	//si el apodo está disponible lo agrega al map de clientes
-	char* regexpLogin = "LOGIN\\s(\\w+)";
-	//distingo entre tipos de mensaje
-	int i = 0;
-	int res;
-	int len;
-	char result[BUFSIZ];
-	char err_buf[BUFSIZ];
-	//        char* src = "hello world";
-	//    const char* pattern = "(\\w+)";
-	regex_t preg;
-
-	regmatch_t pmatch[10];
-
-	if ((res = regcomp(&preg, regexpLogin, REG_EXTENDED)) != 0) {
-		regerror(res, &preg, err_buf, BUFSIZ);
-		printf("regcomp: %s\n", err_buf);
-		exit(res);
-	}
-
-	res = regexec(&preg, mesg, 10, pmatch, REG_NOTBOL);
-
-	if (res == REG_NOMATCH) {
-		printf("Mensaje invalido\n");
-		return false;
-	}
-	if (pmatch[1].rm_so != -1) {
-		len = pmatch[i].rm_eo - pmatch[i].rm_so;
-		memcpy(result, mesg + pmatch[i].rm_so, len);
-		result[len] = 0;
-		// chequeo que el nombre no esté en uso
-		if (clientes.find(result) == clientes.end()) {
-			string tmpCliente(result);
-			clientes[tmpCliente] = cliaddr;
-			return true;
-		} else return false;
-	} else return false;
-	regfree(&preg);
-	return true;
-}
-
-bool esLogout() {
-	char* regexpLogin = "LOGOUT\n";
+bool esLogout(string msj) {
+	const char* regexpLogin = "LOGOUT\n";
 	//distingo entre tipos de mensaje
 	int i = 0;
 	int res;
@@ -145,6 +118,60 @@ bool esLogout() {
 		}
 		return true;
 	}
+}
+
+bool esGetConnected(string msj){
+
+}
+
+bool esMessage(string msj){
+
+}
+
+bool esPrivateMessage(string msj){
+
+}
+
+bool apodoDisponible() {
+	//si el apodo está disponible lo agrega al map de clientes
+	const char* regexpLogin = "LOGIN\\s(\\w+)";
+	//distingo entre tipos de mensaje
+	int i = 0;
+	int res;
+	int len;
+	char result[BUFSIZ];
+	char err_buf[BUFSIZ];
+	//        char* src = "hello world";
+	//    const char* pattern = "(\\w+)";
+	regex_t preg;
+
+	regmatch_t pmatch[10];
+
+	if ((res = regcomp(&preg, regexpLogin, REG_EXTENDED)) != 0) {
+		regerror(res, &preg, err_buf, BUFSIZ);
+		printf("regcomp: %s\n", err_buf);
+		exit(res);
+	}
+
+	res = regexec(&preg, mesg, 10, pmatch, REG_NOTBOL);
+
+	if (res == REG_NOMATCH) {
+		printf("Mensaje invalido\n");
+		return false;
+	}
+	if (pmatch[1].rm_so != -1) {
+		len = pmatch[i].rm_eo - pmatch[i].rm_so;
+		memcpy(result, mesg + pmatch[i].rm_so, len);
+		result[len] = 0;
+		// chequeo que el nombre no esté en uso
+		if (clientes.find(result) == clientes.end()) {
+			string tmpCliente(result);
+			clientes[tmpCliente] = cliaddr;
+			return true;
+		} else return false;
+	} else return false;
+	regfree(&preg);
+	return true;
 }
 
 int main(int argc, char**argv) {
