@@ -43,8 +43,15 @@ unsigned char one = 1;
 int sockUnicast;
 struct sockaddr_in servUnicAddr, unic_cliaddr;
 
-void rdt_send(char* msj, const sockaddr_in& cli_addr) {
+void rdt_send_unicast(char* msj, const sockaddr_in& cli_addr) {
+	cout << "rdt_send_unicast message: " << msj << endl;
 	sendto(sockUnicast, msj, sizeof (msj), 0, (struct sockaddr *) &cli_addr, sizeof (cli_addr));
+	delete [] msj;
+}
+
+void rdt_send_multicast(char* msj) {
+	cout << "rdt_send_multicast message: " << msj << endl;
+	sendto(sockMulticast, msj, strlen(msj), 0, (struct sockaddr *) &servMulticAddr, sizeof (struct sockaddr_in));
 	delete [] msj;
 }
 
@@ -79,7 +86,7 @@ void deliver_message(char* msj, const sockaddr_in& cli_addr) {
 			char *resp_ptr = new char[resp.length() + 1];
 			*resp_ptr = 0;
 			strcpy(resp_ptr, resp.c_str());
-			thread t1(rdt_send, resp_ptr, cli_addr);
+			thread t1(rdt_send_unicast, resp_ptr, cli_addr);
 			t1.detach();
 		} else {
 			// El nick está disponible. Envío "OK"
@@ -87,24 +94,23 @@ void deliver_message(char* msj, const sockaddr_in& cli_addr) {
 			char *resp_ptr = new char[resp.length() + 1];
 			*resp_ptr = 0;
 			strcpy(resp_ptr, resp.c_str());
-			thread t1(rdt_send, resp_ptr, cli_addr);
+			thread t1(rdt_send_unicast, resp_ptr, cli_addr);
 			t1.detach();
+
+			// Añadir el cliente a la lista
+			cliente nuevo_cliente;
+			strcpy(nuevo_cliente.nick, nick);
+			nuevo_cliente.address = cli_addr;
+			nuevo_cliente.last_seen = time(NULL);
+			lista_clientes.push_back(nuevo_cliente);
 		}
-
-		// Añadir el cliente a la lista
-		cliente nuevo_cliente;
-		strcpy(nuevo_cliente.nick, nick);
-		nuevo_cliente.address = cli_addr;
-		nuevo_cliente.last_seen = time(NULL);
-		lista_clientes.push_back(nuevo_cliente);
-
 	} else if (strcmp(comando, "LOGOUT") == 0) {
 		// Envío respuesta al cliente
 		string resp = "GOODBYE";
 		char *resp_ptr = new char[resp.length() + 1];
 		*resp_ptr = 0;
 		strcpy(resp_ptr, resp.c_str());
-		thread t1(rdt_send, resp_ptr, cli_addr);
+		thread t1(rdt_send_unicast, resp_ptr, cli_addr);
 		t1.detach();
 
 		// Quitar al cliente de la lista
@@ -118,51 +124,81 @@ void deliver_message(char* msj, const sockaddr_in& cli_addr) {
 			it++;
 		}
 
-	} //else if (strcmp(commndo, "GET_CONNECTED") == 0) {
-	//		// Enviar los nombres de los clientes conectados
-	//		string resp = "CONNECTED ";
-	//		for (vector<cliente>::iterator it = lista_clientes.begin(); it != lista_clientes.end(); it++) {
-	//			resp = resp + it->nick;
-	//		}
-	//		char * resp_ptr;
-	//		strcpy(resp_ptr, resp.c_str());
-	//		//rdt_send(resp_ptr, ip, puerto);
-	//
-	//	} else if (strcmp(comando, "MESSAGE") == 0) {
-	//		// Hacer multicast del mensaje
-	//
-	//		// Creo el cabezal
-	//		string cabezal = "RELAYED_MESSAGE ";
-	//		char * cabezal_ptr = new char[MAX_MESSAGE_LENGHT];
-	//		strcpy(cabezal_ptr, cabezal.c_str());
-	//
-	//		// Obtengo el mensaje del msj recibido
-	//		char * mensaje = strchr(msj, ' ');
-	//
-	//		// concateno ambos
-	//		strcat(cabezal_ptr, mensaje);
-	//
-	//		// Envío
-	//		//rdt_broadcast(cabezal_ptr);
-	//		//thread t1(rdt_broadcast, cabezal_ptr);
-	//
-	//	} else if (strcmp(comando, "PRIVATE_MESSAGE") == 0) {
-	//		// Enviar por unicast el mensaje
-	//
-	//		// Creo el cabezal
-	//		string cabezal = "PRIVATE_MESSAGE ";
-	//		char * cabezal_ptr = new char[MAX_MESSAGE_LENGHT];
-	//		strcpy(cabezal_ptr, cabezal.c_str());
-	//
-	//		// Obtengo el mensaje del msj recibido
-	//		char * mensaje = strchr(msj, ' ');
-	//
-	//		// concateno ambos
-	//		strcat(cabezal_ptr, mensaje);
-	//
-	//		// Envío
-	//		//rdt_send(cabezal_ptr, ip, puerto);
-	//	}
+	} else if (strcmp(comando, "GET_CONNECTED") == 0) {
+		// Enviar los nombres de los clientes conectados
+		string resp = "CONNECTED";
+		for (vector<cliente>::iterator it = lista_clientes.begin(); it != lista_clientes.end(); it++) {
+			resp = resp + " " + it->nick;
+		}
+		char *resp_ptr = new char[resp.length() + 1];
+		*resp_ptr = 0;
+		strcpy(resp_ptr, resp.c_str());
+		thread t1(rdt_send_unicast, resp_ptr, cli_addr);
+		t1.detach();
+
+	} else if (strcmp(comando, "MESSAGE") == 0) {
+		// Hacer multicast del mensaje
+
+		// Creo el cabezal
+		string resp = "RELAYED_MESSAGE ";
+
+		// Busco el nickname del cliente
+		bool encontre = false;
+		vector<cliente>::iterator it = lista_clientes.begin();
+		while (not encontre && it != lista_clientes.end()) {
+			if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
+				resp = resp + it->nick + " ";
+				encontre = true;
+			}
+			it++;
+		}
+
+		char * resp_ptr = new char[MAX_MESSAGE_LENGHT];
+		*resp_ptr = 0;
+		strcpy(resp_ptr, resp.c_str());
+
+		// Obtengo el texto del mensaje
+		char * mensaje = strchr(msj, '\0') + 1;
+
+		// concateno ambos
+		strcat(resp_ptr, mensaje);
+
+		// Envío
+		thread t1(rdt_send_multicast, resp_ptr);
+		t1.detach();
+
+	} else if (strcmp(comando, "PRIVATE_MESSAGE") == 0) {
+		// Enviar por unicast el mensaje
+
+		// Creo el cabezal
+		string resp = "PRIVATE_MESSAGE ";
+		char * resp_ptr = new char[MAX_MESSAGE_LENGHT];
+		*resp_ptr = 0;
+		strcpy(resp_ptr, resp.c_str());
+		
+		// Obtengo el nick del destinatario
+		char * destinatario = strtok(NULL, " ");
+		
+		// Obtengo el texto del mensaje
+		char * mensaje = strchr(msj, '\0') + 1;
+
+		// concateno ambos
+		strcat(resp_ptr, mensaje);
+
+		// Busco la dirección del destinatario
+		bool encontre = false;
+		vector<cliente>::iterator it = lista_clientes.begin();
+		while (not encontre && it != lista_clientes.end()) {
+			if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
+				resp = resp + it->nick + " ";
+				encontre = true;
+			}
+			it++;
+		}
+		
+		// Envío
+		//rdt_send(cabezal_ptr, ip, puerto);
+	}
 };
 
 void rdt_rcv_unicast() {
@@ -192,6 +228,36 @@ void unicastSocket_setUp() {
 	bind(sockUnicast, (struct sockaddr *) &servUnicAddr, sizeof (servUnicAddr));
 }
 
+void multicastSocket_setUp() {
+	// Creo el socket UDP
+	memset(&servMulticAddr, 0, sizeof (struct sockaddr_in));
+	sockMulticast = socket(PF_INET, SOCK_DGRAM, 0);
+	if (sockMulticast < 0) perror("Error creating socket");
+
+	servMulticAddr.sin_family = PF_INET;
+	servMulticAddr.sin_port = htons(0); // No cambiar! Debe ser el que use el cliente para enviar sus ACK
+	servMulticAddr.sin_addr.s_addr = htonl(INADDR_ANY); // bind socket to any interface
+	int status = bind(sockMulticast, (struct sockaddr *) &servMulticAddr, (socklen_t)sizeof (servMulticAddr));
+	if (status < 0) perror("Error binding socket to interface");
+
+	memset(&iaddr, 0, sizeof (struct in_addr));
+	iaddr.s_addr = INADDR_ANY; // use DEFAULT interface
+
+	// Set the outgoing interface to DEFAULT
+	setsockopt(sockMulticast, IPPROTO_IP, IP_MULTICAST_IF, &iaddr, sizeof (struct in_addr));
+
+	// Set multicast packet TTL; default TTL is 1
+	setsockopt(sockMulticast, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof (unsigned char));
+
+	// Send multicast traffic to myself too (sirve para el testing si se corren el cliente y el servidor en el mismo host)
+	setsockopt(sockMulticast, IPPROTO_IP, IP_MULTICAST_LOOP, &one, sizeof (unsigned char));
+
+	// Set destination address
+	servMulticAddr.sin_family = PF_INET;
+	servMulticAddr.sin_addr.s_addr = inet_addr("225.5.4.3");
+	servMulticAddr.sin_port = htons(6789); // No cambiar! Debe ser el mismo que use el cliente para recibir
+}
+
 void crear_cliente() {
 	cliente c;
 	c.last_seen = time(NULL);
@@ -211,6 +277,7 @@ void listar_clientes() {
 
 int main(int argc, char** argv) {
 	unicastSocket_setUp();
+	multicastSocket_setUp();
 	crear_cliente();
 	listar_clientes();
 	rdt_rcv_unicast();
