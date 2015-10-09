@@ -4,39 +4,68 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import static redes.Cliente.PACKETSIZE;
-import static redes.Cliente.updateChat;
+import static redes.Interfaz.PACKETSIZE;
 
-public class Multicast implements Runnable {
+/**
+ * Thread que está suscrito al canal de multicast y espera permanentemente
+ * mensajes del servidor.
+ *
+ * @author marccio
+ */
+public class Multicast extends Thread {
 
     private InetAddress multicastIP;
     private int multicastPort = 6789; // No cambiar! Debe ser el mismo en el servidor.
-//    private byte[] mensaje = new byte[PACKETSIZE];
     private String strMulticastIP = "225.5.4.3";
     private MulticastSocket socketMulticast;
+    boolean conexionActiva = false;
+    private Estado estado;
+    int paso;
+    DatagramPacket sndpkt; //ultimo paquete enviado
+    private boolean confiabilidad;
 
     private enum Estado {
 
         ESPERO_0, ESPERO_1
     }
-    private Estado estado;
-    int paso;
-    DatagramPacket sndpkt; //ultimo paquete enviado
-    private boolean confiabilidad = false;
 
-    Multicast() {
+    /**
+     * Se crea el thread para escuchar en multicast
+     *
+     * @param confiabilidad Si se pasa true, se aplica rdt para multicast
+     */
+    public Multicast(boolean confiabilidad) {
+        this.confiabilidad = confiabilidad;
+        // Este es el thread que va a escuchar por nuevos mensajes y mostrarlos en el area del chat.
+        try {
+            //inicializo máquina de estados
+            //espero numero de secuencia 0 de la capa inferior
+            estado = Estado.ESPERO_0;
+            paso = 0;
+            //inicializo socket multicast
+            // Fijo la dirección ip y el puerto de donde voy a escuchar los mensajes. IP 225.5.4.<nro_grupo> puerto 6789
+            multicastIP = InetAddress.getByName(strMulticastIP);
+            socketMulticast = new MulticastSocket(multicastPort);
+            socketMulticast.joinGroup(multicastIP);
+            // Loop
+            conexionActiva = true;
+        } catch (IOException ex) {
+            Logger.getLogger(Multicast.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
+    /**
+     * Se termina la conexión del thread con el grupo multicast; se cierra el
+     * socket
+     */
     public void terminarConexion() {
         if (socketMulticast != null && !socketMulticast.isClosed()) {
             socketMulticast.close();
         }
+        conexionActiva = false;
     }
 
     private boolean is_not_ACK(DatagramPacket rcvpkt) {
@@ -87,8 +116,7 @@ public class Multicast implements Runnable {
                 socketMulticast.receive(rcvpkt);
 
                 byte[] bytes = rcvpkt.getData();
-//                //extraigo el header para manipularlo bitwise
-//                byte header = bytes[0];
+                //extraigo el header para manipularlo bitwise
                 //extraigo la data y creo un string a partir de ella
                 byte[] data = Arrays.copyOfRange(bytes, 1, bytes.length - 1);
                 strMensaje = new String(data, 0, data.length);
@@ -124,44 +152,30 @@ public class Multicast implements Runnable {
             }
         }
         //genero un thread de DataSend con el mensaje que extraje del paquete
+        //DataSend a su vez va a determinar qué tipo de mensaje es y va a actuar en consecuencia
         (new DataSend(strMensaje)).start();
     }
 
     @Override
     public void run() {
-		// Este es el thread que va a escuchar por nuevos mensajes y mostrarlos en el area del chat.
-
-        // Fijo la dirección ip y el puerto de donde voy a escuchar los mensajes. IP 225.5.4.<nro_grupo> puerto 6789
-        try {
-            //inicializo máquina de estados
-            //espero numero de secuencia 0 de la capa inferior
-            estado = Estado.ESPERO_0;
-            paso = 0;
-            //inicializo socket multicast
-            multicastIP = InetAddress.getByName(strMulticastIP);
-            socketMulticast = new MulticastSocket(multicastPort);
-            socketMulticast.joinGroup(multicastIP);
-            // Loop
-            while (true) {
-                byte[] buffer = new byte[PACKETSIZE];
-                DatagramPacket paquete = new DatagramPacket(buffer, buffer.length);
-                //variable booleana para determinar si usar rdt o no
-                if (confiabilidad) {
-                    //recibo mensaje de capa de transporte artificial (con confiabilidad)
-                    rdt_rcv(paquete);
-                } else {
+        while (conexionActiva) {
+            byte[] buffer = new byte[PACKETSIZE];
+            DatagramPacket paquete = new DatagramPacket(buffer, buffer.length);
+            //variable booleana para determinar si usar rdt o no
+            if (confiabilidad) {
+                //recibo mensaje de capa de transporte artificial (con confiabilidad)
+                rdt_rcv(paquete);
+            } else {
+                try {
                     String strMensaje;
                     socketMulticast.receive(paquete);
                     strMensaje = new String(paquete.getData(), 0, paquete.getLength());
-                    // Se debe parsear el datagrama para obtener el apodo y el mensaje por separado
-                    // para mostrarlos en el area de chat.
-                    updateChat(strMensaje, true, false);
+                    System.out.println("Multicast: " + strMensaje);
+                    (new DataSend(strMensaje)).start();
+                } catch (IOException ex) {
+                    Logger.getLogger(Multicast.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
-        } catch (UnknownHostException ex) {
-            Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 }
