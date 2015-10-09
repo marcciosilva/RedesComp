@@ -7,11 +7,8 @@ package redes;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.JOptionPane;
 
 /**
  * Thread que se usa para hacer el login (mediante el uso del parámetro queue de
@@ -29,8 +26,7 @@ public class ListenerPrivados extends ConfiabilidadUnicast {
     /**
      * Cola de mensajes para comunicarse con el thread
      */
-    public BlockingQueue<String> queue = new LinkedBlockingQueue<>();
-
+//    public BlockingQueue<String> queue = new LinkedBlockingQueue<>();
     /**
      * Construye el thread
      *
@@ -51,25 +47,22 @@ public class ListenerPrivados extends ConfiabilidadUnicast {
         conexionAbierta = true;
         while (conexionAbierta) {
             String msg;
-            synchronized (socketUnicast) {
-                while ((msg = queue.poll()) != null) {
-                    if (msg.equals("login") || msg.equals("logout")) {
-                        //porque sé que si vino un rdt_send vino el mensaje después
-                        System.out.println("Mensaje recibido por thread : " + msg);
-                        rdt_send(queue.poll());
-                        try {
-                            rdt_rcv();
-                        } catch (IOException ex) {
-                            Logger.getLogger(ListenerPrivados.class.getName()).log(Level.SEVERE, null, ex);
-                            JOptionPane.showMessageDialog(Interfaz.getInstance(), "Atención! No se ha recibido una respuesta del servidor", "Sin respuesta", JOptionPane.INFORMATION_MESSAGE);
-                        }
-                    }
-                }
-                try {
-                    rdt_rcv();
-                } catch (IOException ex) {
-                    Logger.getLogger(ListenerPrivados.class.getName()).log(Level.SEVERE, null, ex);
-                }
+//                while ((msg = queue.poll()) != null) {
+//                    if (msg.equals("login") || msg.equals("logout")) {
+//                        //porque sé que si vino un rdt_send vino el mensaje después
+//                        rdt_send(queue.poll());
+//                        try {
+//                            rdt_rcv();
+//                        } catch (IOException ex) {
+//                            Logger.getLogger(ListenerPrivados.class.getName()).log(Level.SEVERE, null, ex);
+//                            JOptionPane.showMessageDialog(Interfaz.getInstance(), "Atención! No se ha recibido una respuesta del servidor", "Sin respuesta", JOptionPane.INFORMATION_MESSAGE);
+//                        }
+//                    }
+//                }
+            try {
+                rdt_rcv();
+            } catch (IOException ex) {
+                Logger.getLogger(ListenerPrivados.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
     }

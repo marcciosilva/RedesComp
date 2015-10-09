@@ -36,7 +36,9 @@ public class ConfiabilidadUnicast extends Thread {
             byte[] data = msj.getBytes();
             DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
             try {
-                socketUnicast.send(paquete);
+                synchronized (socketUnicast) {
+                    socketUnicast.send(paquete);
+                }
             } catch (IOException ex) {
                 Logger.getLogger(Interfaz.class.getName()).log(Level.SEVERE, null, ex);
                 System.err.println(ex.toString());
@@ -58,8 +60,10 @@ public class ConfiabilidadUnicast extends Thread {
                 byte[] data = new byte[PACKETSIZE];
                 DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
                 // Espero por una respuesta con timeout de 2 segundos
-                socketUnicast.setSoTimeout(2000);
-                socketUnicast.receive(paquete);
+                synchronized (socketUnicast) {
+                    socketUnicast.setSoTimeout(2000);
+                    socketUnicast.receive(paquete);
+                }
                 // Convierto el byte [] de la respuesta en un String y se lo paso
                 // a DataSend para que vea que hacer con él
                 String msj = new String(paquete.getData()).split("\0")[0];

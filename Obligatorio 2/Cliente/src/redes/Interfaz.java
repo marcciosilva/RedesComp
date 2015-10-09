@@ -309,10 +309,7 @@ public class Interfaz extends javax.swing.JFrame {
                 listenerPrivados = new ListenerPrivados(aplicarConfiabilidad, serverIP, serverPort);
                 listenerPrivados.start();
                 String msj = "LOGIN " + apodo + "\0";
-                listenerPrivados.queue.put("login");
-                listenerPrivados.queue.put(msj);
-            } catch (InterruptedException ex) {
-                Logger.getLogger(Interfaz.class.getName()).log(Level.SEVERE, null, ex);
+                (new LoginLogout(false, msj, serverIP, serverPort)).start();
             } catch (SocketException ex) {
                 Logger.getLogger(Interfaz.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -331,13 +328,8 @@ public class Interfaz extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonConectarActionPerformed
 
     private void jButtonDesconectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonDesconectarActionPerformed
-        try {
-            String msj = "LOGOUT\0";
-            listenerPrivados.queue.put("logout");
-            listenerPrivados.queue.put(msj);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(Interfaz.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        String msj = "LOGOUT\0";
+        (new LoginLogout(false, msj, serverIP, serverPort)).start();
     }//GEN-LAST:event_jButtonDesconectarActionPerformed
 
     private void jButtonEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEnviarActionPerformed
