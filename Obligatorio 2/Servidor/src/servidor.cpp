@@ -35,10 +35,11 @@ using namespace std;
 	PRIVATE_MESSAGE <receptor> <msg><CR>
 
  * Comandos del servidor al cliente:
+    OK/NOK<CR>
+    GOODBYE<CR>
+    CONNECTED <usr1>[|<usr2>...]<CR>
 	RELAYED_MESSAGE <emisor> <msg><CR>
 	PRIVATE_MESSAGE <emisor> <msg><CR>
-	CONNECTED <usr1>[|<usr2>...]<CR>
-	GOODBYE<CR>
  */
 
 // Estructura de datos compartida por todos los threads
