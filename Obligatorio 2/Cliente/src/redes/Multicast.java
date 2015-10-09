@@ -8,18 +8,16 @@ import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import static redes.Cliente.PACKETSIZE;
-import static redes.Cliente.updateChat;
+import static redes.Interfaz.PACKETSIZE;
 
-public class Multicast implements Runnable {
+public class Multicast extends Thread {
 
     private InetAddress multicastIP;
     private int multicastPort = 6789; // No cambiar! Debe ser el mismo en el servidor.
 //    private byte[] mensaje = new byte[PACKETSIZE];
     private String strMulticastIP = "225.5.4.3";
     private MulticastSocket socketMulticast;
+    boolean conexionActiva = false;
 
     private enum Estado {
 
@@ -37,6 +35,7 @@ public class Multicast implements Runnable {
         if (socketMulticast != null && !socketMulticast.isClosed()) {
             socketMulticast.close();
         }
+        conexionActiva = false;
     }
 
     private boolean is_not_ACK(DatagramPacket rcvpkt) {
@@ -124,6 +123,7 @@ public class Multicast implements Runnable {
             }
         }
         //genero un thread de DataSend con el mensaje que extraje del paquete
+        //DataSend a su vez va a determinar qué tipo de mensaje es y va a actuar en consecuencia
         (new DataSend(strMensaje)).start();
     }
 
@@ -142,7 +142,8 @@ public class Multicast implements Runnable {
             socketMulticast = new MulticastSocket(multicastPort);
             socketMulticast.joinGroup(multicastIP);
             // Loop
-            while (true) {
+            conexionActiva = true;
+            while (conexionActiva) {
                 byte[] buffer = new byte[PACKETSIZE];
                 DatagramPacket paquete = new DatagramPacket(buffer, buffer.length);
                 //variable booleana para determinar si usar rdt o no
@@ -153,15 +154,14 @@ public class Multicast implements Runnable {
                     String strMensaje;
                     socketMulticast.receive(paquete);
                     strMensaje = new String(paquete.getData(), 0, paquete.getLength());
-                    // Se debe parsear el datagrama para obtener el apodo y el mensaje por separado
-                    // para mostrarlos en el area de chat.
-                    updateChat(strMensaje, true, false);
+                    System.out.println("Multicast: " + strMensaje);
+                    (new DataSend(strMensaje)).start();
                 }
             }
         } catch (UnknownHostException ex) {
-            Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Interfaz.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
-            Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Interfaz.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 }
