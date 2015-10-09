@@ -334,9 +334,12 @@ public class Interfaz extends javax.swing.JFrame {
 
     private void jButtonEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEnviarActionPerformed
         // Obtengo el chatMsj a ser enviado
-        String msj = jTextFieldMensaje.getText();
+        String contenidoMsj = jTextFieldMensaje.getText();
         // Me fijo si ingresó texto
-        if (!msj.isEmpty()) {
+        if (!contenidoMsj.isEmpty()) {
+            String msj = "MESSAGE ";
+            msj = msj.concat(contenidoMsj);
+            msj = msj.concat("\0");
             (new ThreadMensajesListado(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
         }
         // Limpio la línea de chatMsj
