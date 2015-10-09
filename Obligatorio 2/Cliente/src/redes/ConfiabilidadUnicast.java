@@ -35,7 +35,7 @@ public class ConfiabilidadUnicast extends Thread {
         }
     }
 
-    public void rdt_rcv() {
+    public void rdt_rcv() throws IOException {
         try {
             byte[] data = new byte[PACKETSIZE];
             DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
@@ -50,8 +50,10 @@ public class ConfiabilidadUnicast extends Thread {
         } catch (SocketException ex) {
             Logger.getLogger(ListenerPrivados.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
-            Logger.getLogger(ListenerPrivados.class.getName()).log(Level.SEVERE, null, ex);
-//            JOptionPane.showMessageDialog(Interfaz.getInstance(), "Atención! No se ha recibido una respuesta del servidor", "Interfaz", JOptionPane.INFORMATION_MESSAGE);
+            //tiro la excepcion hacia fuera para manejarla desde los threads,
+            //por ejemplo cuando necesito tirar un popup porque no se recibió
+            //mensaje de respuesta al LOGIN
+            throw ex;
         }
     }
 

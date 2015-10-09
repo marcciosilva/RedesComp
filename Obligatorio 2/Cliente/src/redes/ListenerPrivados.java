@@ -6,16 +6,12 @@
 package redes;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.SocketException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
-import static redes.Interfaz.PACKETSIZE;
 
 /**
  *
@@ -43,9 +39,19 @@ public class ListenerPrivados extends ConfiabilidadUnicast {
                     if (msg.equals("login")) {
                         //porque sé que si vino un rdt_send vino el mensaje después
                         rdt_send(queue.poll());
+                        try {
+                            rdt_rcv();
+                        } catch (IOException ex) {
+                            Logger.getLogger(ListenerPrivados.class.getName()).log(Level.SEVERE, null, ex);
+                            JOptionPane.showMessageDialog(Interfaz.getInstance(), "Atención! No se ha recibido una respuesta del servidor", "Interfaz", JOptionPane.INFORMATION_MESSAGE);
+                        }
                     }
                 }
-                rdt_rcv();
+                try {
+                    rdt_rcv();
+                } catch (IOException ex) {
+                    Logger.getLogger(ListenerPrivados.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
         }
     }

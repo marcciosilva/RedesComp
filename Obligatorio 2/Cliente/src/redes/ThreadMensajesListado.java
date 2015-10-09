@@ -6,15 +6,11 @@
 package redes;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.SocketException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import static redes.Interfaz.PACKETSIZE;
 
 /**
  *
@@ -38,8 +34,12 @@ public class ThreadMensajesListado extends ConfiabilidadUnicast {
         synchronized (socketUnicast) {
             rdt_send(msj);
             if (msj.contains("GET_CONNECTED") || msj.contains("LOGOUT")) {
-                //voy a precisar recibir una respuesta también
-                rdt_rcv();
+                try {
+                    //voy a precisar recibir una respuesta también
+                    rdt_rcv();
+                } catch (IOException ex) {
+                    Logger.getLogger(ThreadMensajesListado.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
         }
     }
