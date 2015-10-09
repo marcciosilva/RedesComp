@@ -53,8 +53,9 @@ public class ListenerPrivados extends ConfiabilidadUnicast {
             String msg;
             synchronized (socketUnicast) {
                 while ((msg = queue.poll()) != null) {
-                    if (msg.equals("login")) {
+                    if (msg.equals("login") || msg.equals("logout")) {
                         //porque sé que si vino un rdt_send vino el mensaje después
+                        System.out.println("Mensaje recibido por thread : " + msg);
                         rdt_send(queue.poll());
                         try {
                             rdt_rcv();

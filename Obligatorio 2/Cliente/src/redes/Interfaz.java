@@ -308,7 +308,7 @@ public class Interfaz extends javax.swing.JFrame {
                 //El listener va a intentar loguearse primero, y después va a escuchar mensajes privados
                 listenerPrivados = new ListenerPrivados(aplicarConfiabilidad, serverIP, serverPort);
                 listenerPrivados.start();
-                String msj = "LOGIN " + apodo + "\n";
+                String msj = "LOGIN " + apodo + "\0";
                 listenerPrivados.queue.put("login");
                 listenerPrivados.queue.put(msj);
             } catch (InterruptedException ex) {
@@ -331,8 +331,13 @@ public class Interfaz extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonConectarActionPerformed
 
     private void jButtonDesconectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonDesconectarActionPerformed
-        String msj = "LOGOUT\n";
-        (new ThreadMensajesListado(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
+        try {
+            String msj = "LOGOUT\0";
+            listenerPrivados.queue.put("logout");
+            listenerPrivados.queue.put(msj);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(Interfaz.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }//GEN-LAST:event_jButtonDesconectarActionPerformed
 
     private void jButtonEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEnviarActionPerformed
@@ -347,7 +352,7 @@ public class Interfaz extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonEnviarActionPerformed
 
     private void jButtonListarConectadosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonListarConectadosActionPerformed
-        String msj = "GET_CONNECTED\n";
+        String msj = "GET_CONNECTED\0";
         (new ThreadMensajesListado(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
     }//GEN-LAST:event_jButtonListarConectadosActionPerformed
 
@@ -357,17 +362,14 @@ public class Interfaz extends javax.swing.JFrame {
      * @param conectados Información de usuarios conectados
      */
     public void comunicarConectados(String conectados) {
-        synchronized (jTextAreaChat) {
-            //viene con CONNECTED al principio
-            jTextAreaChat.append("\n" + conectados + "\n");
-        }
+        updateChat(conectados, true, false);
     }
 
     /**
      * Vacía el área de chat de mensajes anteriores
      */
     public void limpiarAreaChat() {
-        jTextAreaChat.setText("");
+        updateChat(null, true, true);
     }
 
     private void cerrandoVentanaEvent(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_cerrandoVentanaEvent

@@ -42,7 +42,7 @@ public class ThreadMensajesListado extends ConfiabilidadUnicast {
         socketUnicast = Interfaz.getInstance().getSocketOtros();
         synchronized (socketUnicast) {
             rdt_send(msj);
-            if (msj.contains("GET_CONNECTED") || msj.contains("LOGOUT")) {
+            if (msj.contains("GET_CONNECTED")) {
                 try {
                     //voy a precisar recibir una respuesta también
                     rdt_rcv();
