@@ -7,21 +7,28 @@ package redes;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
+ * Thread para mensajes que no involucran login o escucha de mensajes privados.
+ * Por ejemplo MESSAGE, PRIVATE_MESSAGE, LOGOUT. Se usa para mensajes
+ * individuales, o sea que comienza y termina.
  *
  * @author marccio
  */
 public class ThreadMensajesListado extends ConfiabilidadUnicast {
 
     String msj;
-    //para comunicación entre threads
-    public BlockingQueue<String> queue = new LinkedBlockingQueue<>();
 
+    /**
+     * Se construye el thread con el mensaje a enviar y la información del
+     * servidor
+     *
+     * @param msj Mensaje a enviar
+     * @param serverIP Dirección IP del servidor
+     * @param serverPort Puerto donde escucha el servidor
+     */
     public ThreadMensajesListado(String msj, InetAddress serverIP, int serverPort) {
         this.msj = msj;
         this.serverIP = serverIP;

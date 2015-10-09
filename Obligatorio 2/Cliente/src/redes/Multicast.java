@@ -4,33 +4,63 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import static redes.Interfaz.PACKETSIZE;
 
+/**
+ * Thread que está suscrito al canal de multicast y espera permanentemente
+ * mensajes del servidor.
+ *
+ * @author marccio
+ */
 public class Multicast extends Thread {
 
     private InetAddress multicastIP;
     private int multicastPort = 6789; // No cambiar! Debe ser el mismo en el servidor.
-//    private byte[] mensaje = new byte[PACKETSIZE];
     private String strMulticastIP = "225.5.4.3";
     private MulticastSocket socketMulticast;
     boolean conexionActiva = false;
+    private Estado estado;
+    int paso;
+    DatagramPacket sndpkt; //ultimo paquete enviado
+    private boolean confiabilidad;
 
     private enum Estado {
 
         ESPERO_0, ESPERO_1
     }
-    private Estado estado;
-    int paso;
-    DatagramPacket sndpkt; //ultimo paquete enviado
-    private boolean confiabilidad = false;
 
-    Multicast() {
+    /**
+     * Se crea el thread para escuchar en multicast
+     *
+     * @param confiabilidad Si se pasa true, se aplica rdt para multicast
+     */
+    public Multicast(boolean confiabilidad) {
+        this.confiabilidad = confiabilidad;
+        // Este es el thread que va a escuchar por nuevos mensajes y mostrarlos en el area del chat.
+        try {
+            //inicializo máquina de estados
+            //espero numero de secuencia 0 de la capa inferior
+            estado = Estado.ESPERO_0;
+            paso = 0;
+            //inicializo socket multicast
+            // Fijo la dirección ip y el puerto de donde voy a escuchar los mensajes. IP 225.5.4.<nro_grupo> puerto 6789
+            multicastIP = InetAddress.getByName(strMulticastIP);
+            socketMulticast = new MulticastSocket(multicastPort);
+            socketMulticast.joinGroup(multicastIP);
+            // Loop
+            conexionActiva = true;
+        } catch (IOException ex) {
+            Logger.getLogger(Multicast.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
+    /**
+     * Se termina la conexión del thread con el grupo multicast; se cierra el
+     * socket
+     */
     public void terminarConexion() {
         if (socketMulticast != null && !socketMulticast.isClosed()) {
             socketMulticast.close();
@@ -86,8 +116,7 @@ public class Multicast extends Thread {
                 socketMulticast.receive(rcvpkt);
 
                 byte[] bytes = rcvpkt.getData();
-//                //extraigo el header para manipularlo bitwise
-//                byte header = bytes[0];
+                //extraigo el header para manipularlo bitwise
                 //extraigo la data y creo un string a partir de ella
                 byte[] data = Arrays.copyOfRange(bytes, 1, bytes.length - 1);
                 strMensaje = new String(data, 0, data.length);
@@ -129,39 +158,24 @@ public class Multicast extends Thread {
 
     @Override
     public void run() {
-		// Este es el thread que va a escuchar por nuevos mensajes y mostrarlos en el area del chat.
-
-        // Fijo la dirección ip y el puerto de donde voy a escuchar los mensajes. IP 225.5.4.<nro_grupo> puerto 6789
-        try {
-            //inicializo máquina de estados
-            //espero numero de secuencia 0 de la capa inferior
-            estado = Estado.ESPERO_0;
-            paso = 0;
-            //inicializo socket multicast
-            multicastIP = InetAddress.getByName(strMulticastIP);
-            socketMulticast = new MulticastSocket(multicastPort);
-            socketMulticast.joinGroup(multicastIP);
-            // Loop
-            conexionActiva = true;
-            while (conexionActiva) {
-                byte[] buffer = new byte[PACKETSIZE];
-                DatagramPacket paquete = new DatagramPacket(buffer, buffer.length);
-                //variable booleana para determinar si usar rdt o no
-                if (confiabilidad) {
-                    //recibo mensaje de capa de transporte artificial (con confiabilidad)
-                    rdt_rcv(paquete);
-                } else {
+        while (conexionActiva) {
+            byte[] buffer = new byte[PACKETSIZE];
+            DatagramPacket paquete = new DatagramPacket(buffer, buffer.length);
+            //variable booleana para determinar si usar rdt o no
+            if (confiabilidad) {
+                //recibo mensaje de capa de transporte artificial (con confiabilidad)
+                rdt_rcv(paquete);
+            } else {
+                try {
                     String strMensaje;
                     socketMulticast.receive(paquete);
                     strMensaje = new String(paquete.getData(), 0, paquete.getLength());
                     System.out.println("Multicast: " + strMensaje);
                     (new DataSend(strMensaje)).start();
+                } catch (IOException ex) {
+                    Logger.getLogger(Multicast.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
-        } catch (UnknownHostException ex) {
-            Logger.getLogger(Interfaz.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(Interfaz.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 }

@@ -15,6 +15,7 @@ import java.util.logging.Logger;
 import static redes.Interfaz.PACKETSIZE;
 
 /**
+ * Clase que implementa confiabilidad, para uso de los demás threads de unicast
  *
  * @author marccio
  */
@@ -24,6 +25,11 @@ public class ConfiabilidadUnicast extends Thread {
     InetAddress serverIP;
     int serverPort;
 
+    /**
+     * Envía un mensaje (String) aplicando confiabilidad
+     *
+     * @param msj Mensaje a enviar
+     */
     public void rdt_send(String msj) {
         byte[] data = msj.getBytes();
         DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
@@ -35,6 +41,12 @@ public class ConfiabilidadUnicast extends Thread {
         }
     }
 
+    /**
+     * Recibe un mensaje aplicando confiabilidad. El mensaje se comunica hacia
+     * la interfaz mediante un thread DataSend.
+     *
+     * @throws IOException
+     */
     public void rdt_rcv() throws IOException {
         try {
             byte[] data = new byte[PACKETSIZE];

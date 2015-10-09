@@ -6,12 +6,19 @@
 package redes;
 
 /**
+ * Clase principal del proyecto, se encarga de obtener una instancia de la
+ * interfaz y mostrarla
  *
  * @author marccio
  */
 public class Cliente {
 
 //    Interfaz ventanaPrincipal = Interfaz.getInstance();
+    /**
+     * Inicializa una instancia de la interfaz
+     *
+     * @param args
+     */
     public static void main(String args[]) {
         // Set look and Feel
         try {

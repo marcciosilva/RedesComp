@@ -9,10 +9,20 @@ import java.util.logging.Logger;
 import javax.swing.JOptionPane;
 import org.apache.commons.validator.routines.InetAddressValidator;
 
+/**
+ * Interfaz del cliente de chat, que además controla threads y sockets
+ *
+ * @author marccio
+ */
 public class Interfaz extends javax.swing.JFrame {
 
     private static Interfaz instance = null;
 
+    /**
+     * Devuelve instancia de la interfaz
+     *
+     * @return Instancia de la interfaz
+     */
     public static Interfaz getInstance() {
         if (instance == null) {
             instance = new Interfaz();
@@ -36,6 +46,10 @@ public class Interfaz extends javax.swing.JFrame {
         return !(s.matches(".*(\\s+).*") || s.matches(""));
     }
 
+    /**
+     * Termina la conexión del cliente con el servidor, terminando los threads,
+     * cerrando los sockets correspondientes y limpiando el área de chat
+     */
     public void terminarConexion() {
 
         try {
@@ -91,6 +105,13 @@ public class Interfaz extends javax.swing.JFrame {
         }
     }
 
+    /**
+     * Actualiza el área de chat con mutuaexclusión
+     *
+     * @param msj Mensaje a mostrar
+     * @param enable Indica si se debe deshabilitar el área de chat
+     * @param clear Indica si se debe limpiar el área de chat
+     */
     public synchronized void updateChat(String msj, boolean enable, boolean clear) {
         if (clear) {
             jTextAreaChat.setText("");
@@ -207,6 +228,9 @@ public class Interfaz extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
+    /**
+     * Le comunica a la interfaz que hubo un login correcto
+     */
     public void comunicarOK() {
         conectado = true;
         // Deshabilito
@@ -229,10 +253,20 @@ public class Interfaz extends javax.swing.JFrame {
         updateChat("Usted está en línea!", true, false);
     }
 
+    /**
+     * Devuelve referencia al socketUnicastLogin
+     *
+     * @return Referencia al socketUnicastLogin
+     */
     public DatagramSocket getUnicastSocket() {
         return socketUnicastLogin;
     }
 
+    /**
+     * Devuelve referencia al socketUnicastOtros
+     *
+     * @return Referencia al socketUnicastOtros
+     */
     public DatagramSocket getSocketOtros() {
         return socketUnicastOtros;
     }
@@ -265,7 +299,7 @@ public class Interfaz extends javax.swing.JFrame {
         if (okIP && okPort && okApodo) {
             try {
                 // Corro el listener
-                multicastThread = new Multicast();
+                multicastThread = new Multicast(false);
                 multicastThread.start();
                 //inicializo sockets
                 socketUnicastLogin = new DatagramSocket();
@@ -317,6 +351,11 @@ public class Interfaz extends javax.swing.JFrame {
         (new ThreadMensajesListado(msj, serverIP, serverPort)).start();
     }//GEN-LAST:event_jButtonListarConectadosActionPerformed
 
+    /**
+     * Comunica a la interfaz la información de usuarios conectados.
+     *
+     * @param conectados Información de usuarios conectados
+     */
     public void comunicarConectados(String conectados) {
         synchronized (jTextAreaChat) {
             //viene con CONNECTED al principio
@@ -324,6 +363,9 @@ public class Interfaz extends javax.swing.JFrame {
         }
     }
 
+    /**
+     * Vacía el área de chat de mensajes anteriores
+     */
     public void limpiarAreaChat() {
         jTextAreaChat.setText("");
     }
@@ -335,14 +377,29 @@ public class Interfaz extends javax.swing.JFrame {
         this.dispose();
     }//GEN-LAST:event_cerrandoVentanaEvent
 
+    /**
+     * Devuelve el apodo del cliente, determinado en la interfaz
+     *
+     * @return Apodo del cliente
+     */
     public String getApodo() {
         return apodo;
     }
 
+    /**
+     * Tamaño fijo de paquete
+     */
     public final static int PACKETSIZE = 65536;
     private int serverPort; // El puerto donde corre el servidor. Se lee desde la interfaz
     private InetAddress serverIP; // La IP donde corre el servidor. Se lee desde la interfaz
-    public DatagramSocket socketUnicastOtros; //socket para mensajes aparte de login
+    /**
+     * Socket utilizado para mensajes que no sean de login (logout, message,
+     * private_message)
+     */
+    public DatagramSocket socketUnicastOtros;
+    /**
+     * Socket utilizado para login y escuchar mensajes privados
+     */
     public DatagramSocket socketUnicastLogin; // El socket para recibir y enviar mansajes unicast.
     private final String strDesconectado = "<html><font color='red'>Desconectado</font></html>";
     private final String strEnLinea = "<html><font color='green'>En línea</font></html>";
