@@ -34,10 +34,12 @@ public class ListenerPrivados extends ConfiabilidadUnicast {
     /**
      * Construye el thread
      *
+     * @param confiabilidad Determina el uso o no de rdt
      * @param serverIP IP del server
      * @param serverPort Puerto donde escucha el servidor
      */
-    public ListenerPrivados(InetAddress serverIP, int serverPort) {
+    public ListenerPrivados(boolean confiabilidad, InetAddress serverIP, int serverPort) {
+        this.confiabilidad = confiabilidad;
         this.serverIP = serverIP;
         this.serverPort = serverPort;
         conexionAbierta = false;

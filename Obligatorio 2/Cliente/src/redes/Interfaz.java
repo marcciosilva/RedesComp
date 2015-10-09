@@ -299,14 +299,14 @@ public class Interfaz extends javax.swing.JFrame {
         if (okIP && okPort && okApodo) {
             try {
                 // Corro el listener
-                multicastThread = new Multicast(false);
+                multicastThread = new Multicast(aplicarConfiabilidad);
                 multicastThread.start();
                 //inicializo sockets
                 socketUnicastLogin = new DatagramSocket();
                 socketUnicastOtros = new DatagramSocket();
                 //Corro el listener unicast
                 //El listener va a intentar loguearse primero, y después va a escuchar mensajes privados
-                listenerPrivados = new ListenerPrivados(serverIP, serverPort);
+                listenerPrivados = new ListenerPrivados(aplicarConfiabilidad, serverIP, serverPort);
                 listenerPrivados.start();
                 String msj = "LOGIN " + apodo + "\n";
                 listenerPrivados.queue.put("login");
@@ -332,7 +332,7 @@ public class Interfaz extends javax.swing.JFrame {
 
     private void jButtonDesconectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonDesconectarActionPerformed
         String msj = "LOGOUT\n";
-        (new ThreadMensajesListado(msj, serverIP, serverPort)).start();
+        (new ThreadMensajesListado(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
     }//GEN-LAST:event_jButtonDesconectarActionPerformed
 
     private void jButtonEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEnviarActionPerformed
@@ -340,7 +340,7 @@ public class Interfaz extends javax.swing.JFrame {
         String msj = jTextFieldMensaje.getText();
         // Me fijo si ingresó texto
         if (!msj.isEmpty()) {
-            (new ThreadMensajesListado(msj, serverIP, serverPort)).start();
+            (new ThreadMensajesListado(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
         }
         // Limpio la línea de chatMsj
         jTextFieldMensaje.setText(null);
@@ -348,7 +348,7 @@ public class Interfaz extends javax.swing.JFrame {
 
     private void jButtonListarConectadosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonListarConectadosActionPerformed
         String msj = "GET_CONNECTED\n";
-        (new ThreadMensajesListado(msj, serverIP, serverPort)).start();
+        (new ThreadMensajesListado(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
     }//GEN-LAST:event_jButtonListarConectadosActionPerformed
 
     /**
@@ -406,6 +406,7 @@ public class Interfaz extends javax.swing.JFrame {
     private byte[] data = new byte[PACKETSIZE]; // El mansaje se manda como byte[], esto es lo que incluye en el paquete
     private boolean conectado = false;
     private String apodo;
+    private boolean aplicarConfiabilidad = false;
     private Multicast multicastThread;
     private ListenerPrivados listenerPrivados;
     // Variables declaration - do not modify//GEN-BEGIN:variables
