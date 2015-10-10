@@ -76,10 +76,10 @@ public class Interfaz extends javax.swing.JFrame {
             }
 
             //mato al socket de login
-            socketUnicastLogin.close();
+            socketUnicast.close();
 
             //mato al socket de otros mensajes
-            socketUnicastOtros.close();
+            socketUnicastListadoUsuarios.close();
 
             // Deshabilito
             jButtonDesconectar.setEnabled(false);
@@ -228,47 +228,64 @@ public class Interfaz extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
+    public void comunicarNoOk() {
+        socketUnicast.close();
+    }
+
     /**
      * Le comunica a la interfaz que hubo un login correcto
      */
     public void comunicarOK() {
-        conectado = true;
-        // Deshabilito
-        jButtonConectar.setEnabled(false);
-        jTextFieldHostIP.setEditable(false);
-        jTextFieldPort.setEditable(false);
-        jTextFieldApodo.setEditable(false);
+        try {
+            //El listener va a intentar loguearse primero, y después va a escuchar mensajes privados
+            listenerPrivados = new ListenerPrivados(aplicarConfiabilidad, serverIP, serverPort);
+            listenerPrivados.start();
 
-        // Habilito
-        jButtonDesconectar.setEnabled(true);
-        jTextFieldMensaje.setText(null);
-        jTextFieldMensaje.setEnabled(true);
-        jButtonEnviar.setEnabled(true);
-        jButtonListarConectados.setEnabled(true);
+            // Corro el listener
+            multicastThread = new Multicast(aplicarConfiabilidad);
+            multicastThread.start();
+            socketUnicastListadoUsuarios = new DatagramSocket();
 
-        // Actualizo estado
-        jLabelStatus.setText(strEnLinea);
+            conectado = true;
+            // Deshabilito
+            jButtonConectar.setEnabled(false);
+            jTextFieldHostIP.setEditable(false);
+            jTextFieldPort.setEditable(false);
+            jTextFieldApodo.setEditable(false);
 
-        // Habilito chat
-        updateChat("Usted está en línea!", true, false);
+            // Habilito
+            jButtonDesconectar.setEnabled(true);
+            jTextFieldMensaje.setText(null);
+            jTextFieldMensaje.setEnabled(true);
+            jButtonEnviar.setEnabled(true);
+            jButtonListarConectados.setEnabled(true);
+
+            // Actualizo estado
+            jLabelStatus.setText(strEnLinea);
+
+            // Habilito chat
+            updateChat("Usted está en línea!", true, false);
+        } catch (SocketException ex) {
+            Logger.getLogger(Interfaz.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     /**
-     * Devuelve referencia al socketUnicastLogin
+     * Devuelve referencia al socketUnicast
      *
-     * @return Referencia al socketUnicastLogin
+     * @return Referencia al socketUnicast
      */
     public DatagramSocket getUnicastSocket() {
-        return socketUnicastLogin;
+        return socketUnicast;
     }
 
     /**
-     * Devuelve referencia al socketUnicastOtros
+     * Devuelve referencia al socketUnicastListadoUsuarios
      *
-     * @return Referencia al socketUnicastOtros
+     * @return Referencia al socketUnicastListadoUsuarios
      */
-    public DatagramSocket getSocketOtros() {
-        return socketUnicastOtros;
+    public DatagramSocket getSocketListado() {
+        return socketUnicastListadoUsuarios;
     }
 
     private void jButtonConectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonConectarActionPerformed
@@ -298,18 +315,10 @@ public class Interfaz extends javax.swing.JFrame {
         // Mandar datagrama y esperar por conexión exitosa
         if (okIP && okPort && okApodo) {
             try {
-                // Corro el listener
-                multicastThread = new Multicast(aplicarConfiabilidad);
-                multicastThread.start();
-                //inicializo sockets
-                socketUnicastLogin = new DatagramSocket();
-                socketUnicastOtros = new DatagramSocket();
-                //Corro el listener unicast
-                //El listener va a intentar loguearse primero, y después va a escuchar mensajes privados
-                listenerPrivados = new ListenerPrivados(aplicarConfiabilidad, serverIP, serverPort);
-                listenerPrivados.start();
+                //inicializo socket de login
+                socketUnicast = new DatagramSocket();
                 String msj = "LOGIN " + apodo + "\0";
-                (new LoginLogout(false, msj, serverIP, serverPort)).start();
+                (new MensajesUsuario(false, msj, serverIP, serverPort)).start();
             } catch (SocketException ex) {
                 Logger.getLogger(Interfaz.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -329,7 +338,7 @@ public class Interfaz extends javax.swing.JFrame {
 
     private void jButtonDesconectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonDesconectarActionPerformed
         String msj = "LOGOUT\0";
-        (new LoginLogout(false, msj, serverIP, serverPort)).start();
+        (new MensajesUsuario(false, msj, serverIP, serverPort)).start();
     }//GEN-LAST:event_jButtonDesconectarActionPerformed
 
     private void jButtonEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEnviarActionPerformed
@@ -340,7 +349,7 @@ public class Interfaz extends javax.swing.JFrame {
             String msj = "MESSAGE ";
             msj = msj.concat(contenidoMsj);
             msj = msj.concat("\0");
-            (new ThreadMensajesListado(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
+            (new MensajesUsuario(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
         }
         // Limpio la línea de chatMsj
         jTextFieldMensaje.setText(null);
@@ -348,7 +357,7 @@ public class Interfaz extends javax.swing.JFrame {
 
     private void jButtonListarConectadosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonListarConectadosActionPerformed
         String msj = "GET_CONNECTED\0";
-        (new ThreadMensajesListado(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
+        (new ThreadListadoUsuarios(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
     }//GEN-LAST:event_jButtonListarConectadosActionPerformed
 
     /**
@@ -358,13 +367,6 @@ public class Interfaz extends javax.swing.JFrame {
      */
     public void comunicarConectados(String conectados) {
         updateChat(conectados, true, false);
-    }
-
-    /**
-     * Vacía el área de chat de mensajes anteriores
-     */
-    public void limpiarAreaChat() {
-        updateChat(null, true, true);
     }
 
     private void cerrandoVentanaEvent(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_cerrandoVentanaEvent
@@ -393,11 +395,11 @@ public class Interfaz extends javax.swing.JFrame {
      * Socket utilizado para mensajes que no sean de login (logout, message,
      * private_message)
      */
-    public DatagramSocket socketUnicastOtros;
+    public DatagramSocket socketUnicastListadoUsuarios;
     /**
      * Socket utilizado para login y escuchar mensajes privados
      */
-    public DatagramSocket socketUnicastLogin; // El socket para recibir y enviar mansajes unicast.
+    public DatagramSocket socketUnicast; // El socket para recibir y enviar mansajes unicast.
     private final String strDesconectado = "<html><font color='red'>Desconectado</font></html>";
     private final String strEnLinea = "<html><font color='green'>En línea</font></html>";
     private byte[] data = new byte[PACKETSIZE]; // El mansaje se manda como byte[], esto es lo que incluye en el paquete
