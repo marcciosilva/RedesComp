@@ -242,37 +242,38 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 				it++;
 			}
 		}
-		if (encontreCliente) {
-			// Agrego el remitente (y un espacio) a la respuesta
-			resp += string(remitente) + " ";
-			char * resp_ptr = new char[MAX_MESSAGE_LENGHT];
-			*resp_ptr = 0;
-			strcpy(resp_ptr, resp.c_str());
 
-			// Le agrego el mensaje a la respuesta
-			strcat(resp_ptr, mensaje);
+		// Agrego el remitente (y un espacio) a la respuesta
+		resp += string(remitente) + " ";
+		char * resp_ptr = new char[MAX_MESSAGE_LENGHT];
+		*resp_ptr = 0;
+		strcpy(resp_ptr, resp.c_str());
 
-			// Busco la dirección del destinatario
-			sockaddr_in dest_addr;
-			{
-				bool encontre = false;
-				vector<cliente>::iterator it = lista_clientes.begin();
-				while (not encontre && it != lista_clientes.end()) {
-					if (strcmp(it->nick, destinatario) == 0) {
-						dest_addr = it->address;
-						encontre = true;
-					}
-					it++;
+		// Le agrego el mensaje a la respuesta
+		strcat(resp_ptr, mensaje);
+
+		// Busco la dirección del destinatario
+		sockaddr_in dest_addr;
+		bool encontreDestinatario = false;
+		{
+			vector<cliente>::iterator it = lista_clientes.begin();
+			while (not encontreDestinatario && it != lista_clientes.end()) {
+				if (strcmp(it->nick, destinatario) == 0) {
+					dest_addr = it->address;
+					encontreDestinatario = true;
 				}
+				it++;
 			}
+		}
 
+		if (encontreDestinatario) {
 			// Envío
 			thread t1(rdt_send_unicast, resp_ptr, dest_addr);
 			t1.detach();
 			cantMensajes++;
 
 		} else { //el destinatario no está conectado
-			string resp = "ERROR";
+			string resp = "El usuario " + string(destinatario) + " no se encuentra en línea.";
 			char *resp_ptr = new char[resp.length() + 1];
 			*resp_ptr = 0;
 			strcpy(resp_ptr, resp.c_str());
