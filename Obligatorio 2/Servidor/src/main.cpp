@@ -49,7 +49,8 @@ struct sockaddr_in servUnicAddr, unic_cliaddr;
 int cantClientes = 0;
 int cantMensajes = 0;
 int cantConexiones = 0;
-int wallTime = 0;
+std::chrono::duration<double> wallTime;
+auto actual = std::chrono::system_clock::now();
 
 void rdt_send_unicast(char* msj, const sockaddr_in& cli_addr) {
 	cout << "rdt_send_unicast message: " << msj << " to: " << inet_ntoa(cli_addr.sin_addr) << endl;
@@ -363,14 +364,22 @@ void leer_entrada(){
             case 'd': 
                 cout << "cantidad de conexiones totales: " << cantConexiones << endl;
                 break;
-                default:;
+            case 'f':
+                wallTime = (std::chrono::system_clock::now() - actual);
+                cout << "tiempo de ejecución: " << wallTime.count() << " segundos"<< endl;  
+                break;
+            default:;
         }
     }        
 }
+
 int main(int argc, char** argv) {
 	unicastSocket_setUp();
 	multicastSocket_setUp();
-
+        
+        //inicio el clock para wallTime
+        auto actual = std::chrono::system_clock::now();
+        
 	//crear_cliente();
 
 	// El thread que hace ping a los clientes
