@@ -53,31 +53,29 @@ std::chrono::duration<double> wallTime;
 auto actual = std::chrono::system_clock::now();
 
 void rdt_send_unicast(char* msj, const sockaddr_in& cli_addr) {
-	cout << "rdt_send_unicast message: " << msj << " to: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << endl;
+	//cout << "rdt_send_unicast message: " << msj << " to: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << endl;
 	sendto(sockUnicast, msj, strlen(msj), 0, (struct sockaddr *) &cli_addr, sizeof (cli_addr));
 	delete [] msj;
 }
 
 void rdt_send_multicast(char* msj) {
-	cout << "rdt_send_multicast message: " << msj << endl;
+	//cout << "rdt_send_multicast message: " << msj << endl;
 	sendto(sockMulticast, msj, strlen(msj), 0, (struct sockaddr *) &servMulticAddr, sizeof (struct sockaddr_in));
 	delete [] msj;
 }
 
 void deliver_message(char* msj, const sockaddr_in cli_addr) {
 	lock_guard<mutex> lock(lista_clientes_mutex); // el lock se libera automáticamente al finalizar el bloque
+	
+	// Imprime en salida standar cada vez que se recibe un mensaje como pide la letra
+	cout << "Mensaje recibido desde: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << endl;
+	cout << "> " << msj << endl;
+
+	// Parseo del mensaje recibido
 	char * comando = strtok(msj, " ");
-
-	cout << "Se recibió mensaje unicast." << endl;
-	cout << "Comando: " << comando << endl;
-	cout << "IP: " << inet_ntoa(cli_addr.sin_addr) << endl;
-	cout << "Puerto: " << ntohs(cli_addr.sin_port) << endl;
-
-
 	if (strcmp(comando, "LOGIN") == 0) {
 		// Obtengo el nick
 		char * nick = strtok(NULL, " ");
-		cout << "NICK: " << nick << endl;
 
 		// Verifico si ya existe un cliente con ese nick
 		bool nick_en_uso = false;
@@ -91,7 +89,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 
 		if (nick_en_uso) {
 			// El nick ya está en uso. Envío "NOK"
-			string resp = "NOK";
+			string resp = "LOGIN_FAILED";
 			char *resp_ptr = new char[resp.length() + 1];
 			*resp_ptr = 0;
 			strcpy(resp_ptr, resp.c_str());
@@ -99,7 +97,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 			t1.detach();
 		} else {
 			// El nick está disponible. Envío "OK"
-			string resp = "OK";
+			string resp = "LOGIN_OK";
 			char *resp_ptr = new char[resp.length() + 1];
 			*resp_ptr = 0;
 			strcpy(resp_ptr, resp.c_str());

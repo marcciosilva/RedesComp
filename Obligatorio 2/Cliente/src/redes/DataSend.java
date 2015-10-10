@@ -19,9 +19,9 @@ public class DataSend extends Thread {
     public DataSend(String msj) {
         System.out.println("Datasend: " + msj);
         Cliente instance = Cliente.getInstance();
-        if (msj.equals("OK")) {
+        if (msj.equals("LOGIN_OK")) {
             instance.comunicarOK();
-        } else if (msj.equals("NOK")) {
+        } else if (msj.equals("LOGIN_FAILED")) {
             JOptionPane.showMessageDialog(
                     instance,
                     "Ya existe un usuario con el apodo " + instance.getApodo()
