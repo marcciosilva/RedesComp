@@ -100,7 +100,6 @@ public class Interfaz extends javax.swing.JFrame {
 		}
 		if (jTextAreaChat.isEnabled() && !msj.equals("")) {
 			jTextAreaChat.append(msj + "\n");
-			//jTextAreaChat.updateUI();
 		}
 	}
 
@@ -131,10 +130,10 @@ public class Interfaz extends javax.swing.JFrame {
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Cliente de Chat - Redes 2015");
-        setMinimumSize(new java.awt.Dimension(665, 460));
-        setPreferredSize(new java.awt.Dimension(665, 460));
+        setMinimumSize(new java.awt.Dimension(640, 490));
+        setPreferredSize(new java.awt.Dimension(640, 490));
         setResizable(false);
-        setSize(new java.awt.Dimension(500, 380));
+        setSize(new java.awt.Dimension(640, 490));
         addWindowListener(new java.awt.event.WindowAdapter() {
             public void windowClosing(java.awt.event.WindowEvent evt) {
                 cerrandoVentanaEvent(evt);
@@ -166,7 +165,7 @@ public class Interfaz extends javax.swing.JFrame {
                 jButtonConectarActionPerformed(evt);
             }
         });
-        getContentPane().add(jButtonConectar, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 220, -1, -1));
+        getContentPane().add(jButtonConectar, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 220, 100, 40));
 
         jButtonDesconectar.setText("Desconectar");
         jButtonDesconectar.setEnabled(false);
@@ -175,7 +174,7 @@ public class Interfaz extends javax.swing.JFrame {
                 jButtonDesconectarActionPerformed(evt);
             }
         });
-        getContentPane().add(jButtonDesconectar, new org.netbeans.lib.awtextra.AbsoluteConstraints(160, 220, -1, -1));
+        getContentPane().add(jButtonDesconectar, new org.netbeans.lib.awtextra.AbsoluteConstraints(160, 220, 100, 40));
 
         jTextAreaChat.setColumns(16);
         jTextAreaChat.setLineWrap(true);
@@ -185,15 +184,15 @@ public class Interfaz extends javax.swing.JFrame {
         jTextAreaChat.setFocusable(false);
         jScrollPane1.setViewportView(jTextAreaChat);
 
-        getContentPane().add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 30, 310, 260));
+        getContentPane().add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 30, 310, 290));
 
         jLabelStatus.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabelStatus.setText(strDesconectado);
-        getContentPane().add(jLabelStatus, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 260, 100, 20));
+        getContentPane().add(jLabelStatus, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 280, 100, 20));
 
         jTextFieldMensaje.setText("Ingrese su mensaje aquí");
         jTextFieldMensaje.setEnabled(false);
-        getContentPane().add(jTextFieldMensaje, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 370, 400, 20));
+        getContentPane().add(jTextFieldMensaje, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 420, 400, 20));
 
         jButtonEnviar.setText("Enviar");
         jButtonEnviar.setEnabled(false);
@@ -202,7 +201,7 @@ public class Interfaz extends javax.swing.JFrame {
                 jButtonEnviarActionPerformed(evt);
             }
         });
-        getContentPane().add(jButtonEnviar, new org.netbeans.lib.awtextra.AbsoluteConstraints(510, 400, -1, -1));
+        getContentPane().add(jButtonEnviar, new org.netbeans.lib.awtextra.AbsoluteConstraints(490, 390, 80, 40));
 
         jButtonListarConectados.setText("Listar usuarios conectados");
         jButtonListarConectados.setEnabled(false);
@@ -211,21 +210,16 @@ public class Interfaz extends javax.swing.JFrame {
                 jButtonListarConectadosActionPerformed(evt);
             }
         });
-        getContentPane().add(jButtonListarConectados, new org.netbeans.lib.awtextra.AbsoluteConstraints(70, 170, 190, -1));
+        getContentPane().add(jButtonListarConectados, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 170, 200, -1));
 
         buttonGroup1.add(buttonPrivado);
         buttonPrivado.setText("Privado");
-        buttonPrivado.addChangeListener(new javax.swing.event.ChangeListener() {
-            public void stateChanged(javax.swing.event.ChangeEvent evt) {
-                buttonPrivadoStateChanged(evt);
-            }
-        });
         buttonPrivado.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 buttonPrivadoActionPerformed(evt);
             }
         });
-        getContentPane().add(buttonPrivado, new org.netbeans.lib.awtextra.AbsoluteConstraints(500, 350, -1, -1));
+        getContentPane().add(buttonPrivado, new org.netbeans.lib.awtextra.AbsoluteConstraints(150, 340, -1, -1));
 
         buttonGroup1.add(buttonPublico);
         buttonPublico.setText("Público");
@@ -234,17 +228,19 @@ public class Interfaz extends javax.swing.JFrame {
                 buttonPublicoActionPerformed(evt);
             }
         });
-        getContentPane().add(buttonPublico, new org.netbeans.lib.awtextra.AbsoluteConstraints(500, 370, -1, -1));
+        getContentPane().add(buttonPublico, new org.netbeans.lib.awtextra.AbsoluteConstraints(230, 340, -1, -1));
 
+        labelTipoMensaje.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         labelTipoMensaje.setText("Tipo de mensaje");
-        getContentPane().add(labelTipoMensaje, new org.netbeans.lib.awtextra.AbsoluteConstraints(490, 330, -1, -1));
+        getContentPane().add(labelTipoMensaje, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 340, 100, -1));
 
         textFieldDestinatario.setText("Ingrese el destinatario aquí");
         textFieldDestinatario.setEnabled(false);
-        getContentPane().add(textFieldDestinatario, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 330, 290, -1));
+        getContentPane().add(textFieldDestinatario, new org.netbeans.lib.awtextra.AbsoluteConstraints(150, 380, 290, -1));
 
+        labelDestinatario.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         labelDestinatario.setText("Destinatario:");
-        getContentPane().add(labelDestinatario, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 330, -1, -1));
+        getContentPane().add(labelDestinatario, new org.netbeans.lib.awtextra.AbsoluteConstraints(33, 380, 100, -1));
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -416,12 +412,9 @@ public class Interfaz extends javax.swing.JFrame {
 		this.dispose();
     }//GEN-LAST:event_cerrandoVentanaEvent
 
-    private void buttonPrivadoStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_buttonPrivadoStateChanged
-    }//GEN-LAST:event_buttonPrivadoStateChanged
-
     private void buttonPrivadoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonPrivadoActionPerformed
 		textFieldDestinatario.setVisible(true);
-		labelDestinatario.setVisible(false);
+		labelDestinatario.setVisible(true);
     }//GEN-LAST:event_buttonPrivadoActionPerformed
 
     private void buttonPublicoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonPublicoActionPerformed

@@ -134,7 +134,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		char *resp_ptr = new char[resp.length() + 1];
 		*resp_ptr = 0;
 		strcpy(resp_ptr, resp.c_str());
-		
+
 		// Envío
 		thread t1(rdt_send_unicast, resp_ptr, cli_addr);
 		t1.detach();
@@ -187,18 +187,12 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 
 		// Creo el cabezal
 		string resp = "PRIVATE_MESSAGE ";
-		char * resp_ptr = new char[MAX_MESSAGE_LENGHT];
-		*resp_ptr = 0;
-		strcpy(resp_ptr, resp.c_str());
 
 		// Obtengo el nick del destinatario
 		char * destinatario = strtok(NULL, " ");
 
 		// Obtengo el texto del mensaje
-		char * mensaje = strchr(msj, '\0') + 1;
-
-		// concateno ambos
-		strcat(resp_ptr, mensaje);
+		char * mensaje = strtok(NULL, "");
 
 		// Busco el nick del remitente
 		char * remitente;
@@ -214,6 +208,15 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 			}
 		}
 
+		// Agrego el remitente (y un espacio) a la respuesta
+		resp += string(remitente) + " ";
+		char * resp_ptr = new char[MAX_MESSAGE_LENGHT];
+		*resp_ptr = 0;
+		strcpy(resp_ptr, resp.c_str());
+
+		// Le agrego el mensaje a la respuesta
+		strcat(resp_ptr, mensaje);
+
 		// Busco la dirección del destinatario
 		sockaddr_in dest_addr;
 		{
@@ -227,7 +230,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 				it++;
 			}
 		}
-		
+
 		// Envío
 		thread t1(rdt_send_unicast, resp_ptr, dest_addr);
 		t1.detach();
