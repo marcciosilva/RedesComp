@@ -56,7 +56,6 @@ public class ConfiabilidadUnicast extends Thread {
      */
     public void rdt_rcv() throws IOException {
         if (!confiabilidad) {
-            try {
                 byte[] data = new byte[PACKETSIZE];
                 DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
                 // Espero por una respuesta con timeout de 2 segundos
@@ -66,14 +65,6 @@ public class ConfiabilidadUnicast extends Thread {
                 // a DataSend para que vea que hacer con él
                 String msj = new String(paquete.getData()).split("\0")[0];
                 (new DataSend(msj)).start();
-            } catch (SocketException ex) {
-                Logger.getLogger(ConfiabilidadUnicast.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (IOException ex) {
-                //tiro la excepcion hacia fuera para manejarla desde los threads,
-                //por ejemplo cuando necesito tirar un popup porque no se recibió
-                //mensaje de respuesta al LOGIN
-                throw ex;
-            }
         } else {
             //TODO
         }

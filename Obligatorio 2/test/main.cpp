@@ -60,7 +60,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 	lock_guard<mutex> lock(lista_clientes_mutex); // el lock se libera automáticamente al finalizar el bloque
 	char * comando = strtok(msj, " ");
 
-	cout << "Dentro del deliver_message." << endl;
+	cout << "Se recibió mensaje unicast." << endl;
 	cout << "Comando: " << comando << endl;
 	cout << "IP: " << inet_ntoa(cli_addr.sin_addr) << endl;
 	cout << "Puerto: " << ntohs(cli_addr.sin_port) << endl;
@@ -134,6 +134,8 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		char *resp_ptr = new char[resp.length() + 1];
 		*resp_ptr = 0;
 		strcpy(resp_ptr, resp.c_str());
+		
+		// Envío
 		thread t1(rdt_send_unicast, resp_ptr, cli_addr);
 		t1.detach();
 
@@ -157,7 +159,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		*resp_ptr = 0;
 		char * resp_ptr2 = new char[MAX_MESSAGE_LENGHT];
 		*resp_ptr2 = 0;
-		
+
 		strcpy(resp_ptr, resp.c_str());
 		strcpy(resp_ptr2, resp.c_str());
 
@@ -173,12 +175,12 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		t1.detach();
 
 		// Testing solamente (solo cambiar la ip)
-//		sockaddr_in cliente_over_hamachi;
-//		cliente_over_hamachi.sin_family = PF_INET;
-//		cliente_over_hamachi.sin_addr.s_addr = inet_addr("25.0.32.206");
-//		cliente_over_hamachi.sin_port = htons(6789);
-//		thread t2(rdt_send_unicast, resp_ptr2, cliente_over_hamachi);
-//		t2.detach();
+		//		sockaddr_in cliente_over_hamachi;
+		//		cliente_over_hamachi.sin_family = PF_INET;
+		//		cliente_over_hamachi.sin_addr.s_addr = inet_addr("25.0.32.206");
+		//		cliente_over_hamachi.sin_port = htons(6789);
+		//		thread t2(rdt_send_unicast, resp_ptr2, cliente_over_hamachi);
+		//		t2.detach();
 
 	} else if (strcmp(comando, "PRIVATE_MESSAGE") == 0) {
 		// Enviar por unicast el mensaje
@@ -188,29 +190,47 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		char * resp_ptr = new char[MAX_MESSAGE_LENGHT];
 		*resp_ptr = 0;
 		strcpy(resp_ptr, resp.c_str());
-		
+
 		// Obtengo el nick del destinatario
 		char * destinatario = strtok(NULL, " ");
-		
+
 		// Obtengo el texto del mensaje
 		char * mensaje = strchr(msj, '\0') + 1;
 
 		// concateno ambos
 		strcat(resp_ptr, mensaje);
 
-		// Busco la dirección del destinatario
-		bool encontre = false;
-		vector<cliente>::iterator it = lista_clientes.begin();
-		while (not encontre && it != lista_clientes.end()) {
-			if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
-				resp = resp + it->nick + " ";
-				encontre = true;
+		// Busco el nick del remitente
+		char * remitente;
+		{
+			bool encontre = false;
+			vector<cliente>::iterator it = lista_clientes.begin();
+			while (not encontre && it != lista_clientes.end()) {
+				if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
+					remitente = it->nick;
+					encontre = true;
+				}
+				it++;
 			}
-			it++;
+		}
+
+		// Busco la dirección del destinatario
+		sockaddr_in dest_addr;
+		{
+			bool encontre = false;
+			vector<cliente>::iterator it = lista_clientes.begin();
+			while (not encontre && it != lista_clientes.end()) {
+				if (strcmp(it->nick, destinatario) == 0) {
+					dest_addr = it->address;
+					encontre = true;
+				}
+				it++;
+			}
 		}
 		
 		// Envío
-		//rdt_send(cabezal_ptr, ip, puerto);
+		thread t1(rdt_send_unicast, resp_ptr, dest_addr);
+		t1.detach();
 	}
 };
 
@@ -219,11 +239,8 @@ void rdt_rcv_unicast() {
 	// Para guardar la dirección del cliente
 	struct sockaddr_in si_cliente;
 	int slen = sizeof (si_cliente);
-	int i = 1;
 
 	while (true) {
-		cout << "Esperando mensaje unicast nro " << i << endl;
-		i++;
 		recvfrom(sockUnicast, buffer, MAX_PACKET_SIZE, 0, (struct sockaddr *) &si_cliente, (socklen_t *) & slen);
 		char* temp = buffer;
 		thread t1(deliver_message, temp, si_cliente);
@@ -248,12 +265,12 @@ void multicastSocket_setUp() {
 
 	memset(&servMulticAddr, 0, sizeof (struct sockaddr_in));
 	memset(&servMulticInterface, 0, sizeof (struct sockaddr_in));
-	
+
 	// Set local interface address
 	servMulticInterface.sin_family = PF_INET;
 	servMulticInterface.sin_port = htons(0);
 	servMulticInterface.sin_addr.s_addr = htonl(INADDR_ANY);
-	
+
 	// Bind socket to local interface
 	int status = bind(sockMulticast, (struct sockaddr *) &servMulticInterface, (socklen_t)sizeof (servMulticInterface));
 	if (status < 0) perror("Error binding socket to interface");
@@ -275,13 +292,14 @@ void crear_cliente() {
 	//c.address.sin_family = PF_INET;
 	//c.address.sin_addr.s_addr = inet_addr("127.0.0.1");
 	//c.address.sin_port = htons(multicastPort);
-	
+
 	// Lo agrego a la lista de clientes
 	lock_guard<mutex> lock(lista_clientes_mutex);
 	lista_clientes.push_back(c);
 }
 
 // Testing
+
 void listar_clientes() {
 	lock_guard<mutex> lock(lista_clientes_mutex);
 
@@ -293,9 +311,9 @@ void listar_clientes() {
 int main(int argc, char** argv) {
 	unicastSocket_setUp();
 	multicastSocket_setUp();
-	
+
 	crear_cliente();
-	
+
 	// El método que está en loop escuchando
 	rdt_rcv_unicast();
 

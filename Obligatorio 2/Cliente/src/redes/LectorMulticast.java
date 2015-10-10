@@ -147,7 +147,11 @@ public class LectorMulticast extends Thread {
                     System.out.println("Multicast: " + strMensaje);
                     (new DataSend(strMensaje)).start();
                 } catch (IOException ex) {
-                    Logger.getLogger(LectorMulticast.class.getName()).log(Level.SEVERE, null, ex);
+					try {
+						this.join();
+					} catch (InterruptedException ex1) {
+						Logger.getLogger(LectorMulticast.class.getName()).log(Level.SEVERE, null, ex1);
+					}
                 }
             }
         }
