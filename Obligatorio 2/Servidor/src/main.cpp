@@ -45,6 +45,13 @@ unsigned char one = 1;
 int sockUnicast;
 struct sockaddr_in servUnicAddr, unic_cliaddr;
 
+//Variables para interface
+int cantClientes = 0;
+int cantMensajes = 0;
+int cantConexiones = 0;
+std::chrono::duration<double> wallTime;
+auto actual = std::chrono::system_clock::now();
+
 void rdt_send_unicast(char* msj, const sockaddr_in& cli_addr) {
 	cout << "rdt_send_unicast message: " << msj << " to: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << endl;
 	sendto(sockUnicast, msj, strlen(msj), 0, (struct sockaddr *) &cli_addr, sizeof (cli_addr));
@@ -113,6 +120,9 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 			strcpy(aviso_ptr, aviso.c_str());
 			thread t2(rdt_send_multicast, aviso_ptr);
 			t2.detach();
+
+			cantClientes++;
+			cantConexiones++;
 		}
 
 	} else if (strcmp(comando, "LOGOUT") == 0) {
@@ -146,6 +156,8 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		thread t2(rdt_send_multicast, aviso_ptr);
 		t2.detach();
 
+		cantClientes--;
+
 	} else if (strcmp(comando, "GET_CONNECTED") == 0) {
 		// Enviar los nombres de los clientes conectados
 		string resp = "CONNECTED";
@@ -159,6 +171,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		// Envío
 		thread t1(rdt_send_unicast, resp_ptr, cli_addr);
 		t1.detach();
+		cantMensajes++;
 
 	} else if (strcmp(comando, "MESSAGE") == 0) {
 		// Hacer multicast del mensaje
@@ -194,6 +207,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		// Envío
 		thread t1(rdt_send_multicast, resp_ptr);
 		t1.detach();
+		cantMensajes++;
 
 		// Testing solamente (solo cambiar la ip)
 		//		sockaddr_in cliente_over_hamachi;
@@ -217,44 +231,56 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 
 		// Busco el nick del remitente
 		char * remitente;
+		bool encontreCliente = false;
 		{
-			bool encontre = false;
 			vector<cliente>::iterator it = lista_clientes.begin();
-			while (not encontre && it != lista_clientes.end()) {
+			while (not encontreCliente && it != lista_clientes.end()) {
 				if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
 					remitente = it->nick;
-					encontre = true;
+					encontreCliente = true;
 				}
 				it++;
 			}
 		}
+		if (encontreCliente) {
+			// Agrego el remitente (y un espacio) a la respuesta
+			resp += string(remitente) + " ";
+			char * resp_ptr = new char[MAX_MESSAGE_LENGHT];
+			*resp_ptr = 0;
+			strcpy(resp_ptr, resp.c_str());
 
-		// Agrego el remitente (y un espacio) a la respuesta
-		resp += string(remitente) + " ";
-		char * resp_ptr = new char[MAX_MESSAGE_LENGHT];
-		*resp_ptr = 0;
-		strcpy(resp_ptr, resp.c_str());
+			// Le agrego el mensaje a la respuesta
+			strcat(resp_ptr, mensaje);
 
-		// Le agrego el mensaje a la respuesta
-		strcat(resp_ptr, mensaje);
-
-		// Busco la dirección del destinatario
-		sockaddr_in dest_addr;
-		{
-			bool encontre = false;
-			vector<cliente>::iterator it = lista_clientes.begin();
-			while (not encontre && it != lista_clientes.end()) {
-				if (strcmp(it->nick, destinatario) == 0) {
-					dest_addr = it->address;
-					encontre = true;
+			// Busco la dirección del destinatario
+			sockaddr_in dest_addr;
+			{
+				bool encontre = false;
+				vector<cliente>::iterator it = lista_clientes.begin();
+				while (not encontre && it != lista_clientes.end()) {
+					if (strcmp(it->nick, destinatario) == 0) {
+						dest_addr = it->address;
+						encontre = true;
+					}
+					it++;
 				}
-				it++;
 			}
+
+			// Envío
+			thread t1(rdt_send_unicast, resp_ptr, dest_addr);
+			t1.detach();
+			cantMensajes++;
+
+		} else { //el destinatario no está conectado
+			string resp = "ERROR";
+			char *resp_ptr = new char[resp.length() + 1];
+			*resp_ptr = 0;
+			strcpy(resp_ptr, resp.c_str());
+			thread t1(rdt_send_unicast, resp_ptr, cli_addr);
+			t1.detach();
 		}
 
-		// Envío
-		thread t1(rdt_send_unicast, resp_ptr, dest_addr);
-		t1.detach();
+
 	}
 };
 
@@ -347,15 +373,44 @@ void ping_clientes() {
 	}
 }
 
+void leer_entrada() {
+	while (true) {
+		char c = cin.get();
+		switch (c) {
+			case 'a':
+				cout << cantClientes << " clientes en línea." << endl;
+				break;
+			case 's':
+				cout << cantMensajes << " mensajes enviados." << endl;
+				break;
+			case 'd':
+				cout << cantConexiones << " conexiones (total)." << endl;
+				break;
+			case 'f':
+				wallTime = (chrono::system_clock::now() - actual);
+				cout << "wallTime: " << wallTime.count() << " segundos" << endl;
+				break;
+			default:;
+		}
+	}
+}
+
 int main(int argc, char** argv) {
 	unicastSocket_setUp();
 	multicastSocket_setUp();
+
+	//inicio el clock para wallTime
+	auto actual = chrono::system_clock::now();
 
 	//crear_cliente();
 
 	// El thread que hace ping a los clientes
 	thread t1(ping_clientes);
 	t1.detach();
+
+	//thread que lee del teclado
+	thread t2(leer_entrada);
+	t2.detach();
 
 	// El método que está en loop escuchando
 	rdt_rcv_unicast();
