@@ -1,9 +1,11 @@
 // Básicas
 #include <cstdlib>
+#include <stdlib.h>
 #include <vector>
 #include <string.h>
 #include <iostream>
 #include <time.h>
+#include <unistd.h>
 
 // Sockets
 #include <sys/socket.h>
@@ -44,7 +46,7 @@ int sockUnicast;
 struct sockaddr_in servUnicAddr, unic_cliaddr;
 
 void rdt_send_unicast(char* msj, const sockaddr_in& cli_addr) {
-	cout << "rdt_send_unicast message: " << msj << endl;
+	cout << "rdt_send_unicast message: " << msj << " to: " << inet_ntoa(cli_addr.sin_addr) << endl;
 	sendto(sockUnicast, msj, strlen(msj), 0, (struct sockaddr *) &cli_addr, sizeof (cli_addr));
 	delete [] msj;
 }
@@ -104,7 +106,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 			nuevo_cliente.last_seen = time(NULL);
 			lista_clientes.push_back(nuevo_cliente);
 		}
-		
+
 	} else if (strcmp(comando, "LOGOUT") == 0) {
 		// Envío respuesta al cliente
 		string resp = "GOODBYE";
@@ -301,12 +303,28 @@ void crear_cliente() {
 	lista_clientes.push_back(c);
 }
 
-// Testing
-void listar_clientes() {
+vector<sockaddr_in>* client_addesses() {
 	lock_guard<mutex> lock(lista_clientes_mutex);
-
+	vector<sockaddr_in>* lista_direcciones_ptr = new vector<sockaddr_in>();
 	for (vector<cliente>::iterator it = lista_clientes.begin(); it != lista_clientes.end(); it++) {
-		cout << it->nick << endl;
+		lista_direcciones_ptr->push_back(it->address);
+	}
+	return lista_direcciones_ptr;
+}
+
+void ping_clientes() {
+	string alive_str = "ALIVE";
+
+	while (true) {
+		vector<sockaddr_in>* lista_clientes = client_addesses();
+		if (not lista_clientes->empty()) {
+			for (vector<sockaddr_in>::iterator it = lista_clientes->begin(); it != lista_clientes->end(); it++) {
+				char * alive_ptr = new char [alive_str.length() + 1];
+				strcpy(alive_ptr, alive_str.c_str());
+				rdt_send_unicast(alive_ptr, *it);
+			}
+		}
+		usleep(1000000); // 1 sec
 	}
 }
 
@@ -314,7 +332,11 @@ int main(int argc, char** argv) {
 	unicastSocket_setUp();
 	multicastSocket_setUp();
 
-	crear_cliente();
+	//crear_cliente();
+
+	// El thread que hace ping a los clientes
+	thread t1(ping_clientes);
+	t1.detach();
 
 	// El método que está en loop escuchando
 	rdt_rcv_unicast();
