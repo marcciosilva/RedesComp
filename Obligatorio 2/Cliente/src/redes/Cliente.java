@@ -4,10 +4,11 @@
  * and open the template in the editor.
  */
 package redes;
+
 /**
  * Clase principal del proyecto, se encarga de obtener una instancia de la
  * interfaz y mostrarla
- * 
+ *
  * @author marccio
  */
 public class Cliente {
