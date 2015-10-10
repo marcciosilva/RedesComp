@@ -66,7 +66,7 @@ public class ConfiabilidadUnicast extends Thread {
                 System.out.println("Unicast: " + msj);
                 (new DataSend(msj)).start();
             } catch (SocketException ex) {
-//                Logger.getLogger(ListenerPrivados.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(ConfiabilidadUnicast.class.getName()).log(Level.SEVERE, null, ex);
             } catch (IOException ex) {
                 //tiro la excepcion hacia fuera para manejarla desde los threads,
                 //por ejemplo cuando necesito tirar un popup porque no se recibió
