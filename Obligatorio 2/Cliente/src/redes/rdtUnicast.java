@@ -12,6 +12,8 @@ import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -20,7 +22,8 @@ import java.util.logging.Logger;
  * @author User
  */
 public class rdtUnicast {
-
+     
+    private final static int TIMEOUT = 2000;
     public final static int PACKETSIZE = 65536;
     private byte[] ack = new byte[PACKETSIZE];
     private byte[] data = new byte[PACKETSIZE];
@@ -30,7 +33,11 @@ public class rdtUnicast {
     DatagramPacket paquete;
     DatagramPacket sndpkt;
     Queue<DatagramPacket> buffer = new LinkedList<DatagramPacket>();
-
+    DatagramPacket in_pck;
+    
+    TimerTask timerTask0;
+                    //running timer task as daemon thread
+    Timer timer0;
     //Emisor
     private enum EstadoSender {
 
@@ -125,19 +132,28 @@ public class rdtUnicast {
                     // creo paquete para enviar a partir del string con numero de secuencia 0
                     paquete = makeDatapkt(false, 0, data, serverIP, serverPort);
                     socketUnicast.send(paquete);
-                    //start timer de 0
+                    socketUnicast.setSoTimeout(TIMEOUT);                   
                     estadoS = EstadoSender.ESPERO_ACK_0;
-
                 } else if (estadoS == EstadoSender.ESPERO_ACK_0) {
-                    DatagramPacket in_pck = new DatagramPacket(ack, ack.length);
-                    socketUnicast.receive(in_pck);
+                    in_pck = new DatagramPacket(ack, ack.length);
+                    try{
+                        socketUnicast.receive(in_pck);
+                    } catch (java.net.SocketTimeoutException ex) {
+                        Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+                        System.out.println("TIMEOUT DE 0");
+                        timeout0Sender = true;
+                    }
+                                           
                     if (timeout0Sender) {
                         // reenvio el paquete
                         socketUnicast.send(paquete);
                         //start timer de 0
+                        socketUnicast.setSoTimeout(TIMEOUT);
+                        timeout0Sender = false;
 
                     } else if (is_ACK(in_pck) && (has_seq0(in_pck))) {
                         // stop timer de 0
+                        socketUnicast.setSoTimeout(0);
                         estadoS = EstadoSender.ESPERO_DATA_1;
                         salir = true;
                         pasoSender = 1;
@@ -151,15 +167,24 @@ public class rdtUnicast {
                     paquete = makeDatapkt(false, 1, data, serverIP, serverPort);
                     socketUnicast.send(paquete);
                     //start timer de 1
+                    socketUnicast.setSoTimeout(TIMEOUT); 
                     estadoS = EstadoSender.ESPERO_ACK_1;
 
                 } else if (estadoS == EstadoSender.ESPERO_ACK_1) {
                     DatagramPacket in_pck = new DatagramPacket(ack, ack.length);
-                    socketUnicast.receive(in_pck);
+                    try{
+                        socketUnicast.receive(in_pck);
+                    } catch (java.net.SocketTimeoutException ex) {
+                        Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+                        System.out.println("TIMEOUT DE 1");
+                        timeout1Sender = true;
+                    }
                     if (timeout1Sender) {
                         // reenvio el paquete
                         socketUnicast.send(paquete);
                         //start timer de 1
+                        socketUnicast.setSoTimeout(TIMEOUT);
+                        timeout1Sender = false;
 
                     } else if (is_ACK(in_pck) && (has_seq1(in_pck))) {
                         // stop timer de 1
