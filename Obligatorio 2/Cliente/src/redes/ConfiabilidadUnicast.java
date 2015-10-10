@@ -70,7 +70,6 @@ public class ConfiabilidadUnicast extends Thread {
                 (new DataSend(msj)).start();
         } else {
             //TODO
-            System.out.println("kkkkkmmkm");
             byte[] data = new byte[PACKETSIZE];
             DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
             rdtUnicast rdt = new rdtUnicast();
