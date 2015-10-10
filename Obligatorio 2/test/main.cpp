@@ -44,8 +44,9 @@ int sockUnicast;
 struct sockaddr_in servUnicAddr, unic_cliaddr;
 
 void rdt_send_unicast(char* msj, const sockaddr_in& cli_addr) {
+	int bytes_sent;
 	cout << "rdt_send_unicast message: " << msj << endl;
-	sendto(sockUnicast, msj, sizeof (msj), 0, (struct sockaddr *) &cli_addr, sizeof (cli_addr));
+	bytes_sent = sendto(sockUnicast, msj, strlen(msj), 0, (struct sockaddr *) &cli_addr, sizeof (cli_addr));
 	delete [] msj;
 }
 
@@ -55,7 +56,7 @@ void rdt_send_multicast(char* msj) {
 	delete [] msj;
 }
 
-void deliver_message(char* msj, const sockaddr_in& cli_addr) {
+void deliver_message(char* msj, const sockaddr_in cli_addr) {
 	lock_guard<mutex> lock(lista_clientes_mutex); // el lock se libera automáticamente al finalizar el bloque
 	char * comando = strtok(msj, " ");
 
