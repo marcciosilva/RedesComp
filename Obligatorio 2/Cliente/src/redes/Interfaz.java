@@ -1,7 +1,9 @@
 package redes;
 
+import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.MulticastSocket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.logging.Level;
@@ -57,10 +59,6 @@ public class Interfaz extends javax.swing.JFrame {
             // Cierro el socket multicast
             // Por alguna razón tira varias excepciones socketCLosed, aunque el
             // listenerThread ya no existe se supone. Así que no entiendo. Igual no genera ningún problema.
-            if (multicastThread.isAlive()) {
-                multicastThread.terminarConexion();
-            }
-
             // Mato al listener
             try {
                 if (multicastThread != null && multicastThread.isAlive()) {
@@ -75,11 +73,11 @@ public class Interfaz extends javax.swing.JFrame {
                 listenerPrivados.join(0, 1); // Hay que matar al proceso así porque está bloqueado recibiendo
             }
 
-            //mato al socket de login
+            //mato al socket unicast
             socketUnicast.close();
 
-            //mato al socket de otros mensajes
-            socketUnicastListadoUsuarios.close();
+            //mato al socket multicast
+            socketMulticast.close();
 
             // Deshabilito
             jButtonDesconectar.setEnabled(false);
@@ -238,13 +236,17 @@ public class Interfaz extends javax.swing.JFrame {
     public void comunicarOK() {
         try {
             //El listener va a intentar loguearse primero, y después va a escuchar mensajes privados
-            listenerPrivados = new ListenerPrivados(aplicarConfiabilidad, serverIP, serverPort);
+            listenerPrivados = new PrivadosUnicast(aplicarConfiabilidad, serverIP, serverPort);
             listenerPrivados.start();
 
             // Corro el listener
+            //inicializo socket multicast
+            // Fijo la dirección ip y el puerto de donde voy a escuchar los mensajes. IP 225.5.4.<nro_grupo> puerto 6789
+            multicastIP = InetAddress.getByName(strMulticastIP);
+            socketMulticast = new MulticastSocket(multicastPort);
+            socketMulticast.joinGroup(multicastIP);
             multicastThread = new Multicast(aplicarConfiabilidad);
             multicastThread.start();
-            socketUnicastListadoUsuarios = new DatagramSocket();
 
             conectado = true;
             // Deshabilito
@@ -265,7 +267,9 @@ public class Interfaz extends javax.swing.JFrame {
 
             // Habilito chat
             updateChat("Usted está en línea!", true, false);
-        } catch (SocketException ex) {
+        } catch (UnknownHostException ex) {
+            Logger.getLogger(Interfaz.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
             Logger.getLogger(Interfaz.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -279,13 +283,8 @@ public class Interfaz extends javax.swing.JFrame {
         return socketUnicast;
     }
 
-    /**
-     * Devuelve referencia al socketUnicastListadoUsuarios
-     *
-     * @return Referencia al socketUnicastListadoUsuarios
-     */
-    public DatagramSocket getSocketListado() {
-        return socketUnicastListadoUsuarios;
+    public MulticastSocket getMulticastSocket() {
+        return socketMulticast;
     }
 
     private void jButtonConectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonConectarActionPerformed
@@ -318,7 +317,7 @@ public class Interfaz extends javax.swing.JFrame {
                 //inicializo socket de login
                 socketUnicast = new DatagramSocket();
                 String msj = "LOGIN " + apodo + "\0";
-                (new MensajesUsuario(false, msj, serverIP, serverPort)).start();
+                (new EnvioUnicast(false, msj, serverIP, serverPort)).start();
             } catch (SocketException ex) {
                 Logger.getLogger(Interfaz.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -338,7 +337,7 @@ public class Interfaz extends javax.swing.JFrame {
 
     private void jButtonDesconectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonDesconectarActionPerformed
         String msj = "LOGOUT\0";
-        (new MensajesUsuario(false, msj, serverIP, serverPort)).start();
+        (new EnvioUnicast(false, msj, serverIP, serverPort)).start();
     }//GEN-LAST:event_jButtonDesconectarActionPerformed
 
     private void jButtonEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEnviarActionPerformed
@@ -349,7 +348,7 @@ public class Interfaz extends javax.swing.JFrame {
             String msj = "MESSAGE ";
             msj = msj.concat(contenidoMsj);
             msj = msj.concat("\0");
-            (new MensajesUsuario(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
+            (new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
         }
         // Limpio la línea de chatMsj
         jTextFieldMensaje.setText(null);
@@ -357,7 +356,7 @@ public class Interfaz extends javax.swing.JFrame {
 
     private void jButtonListarConectadosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonListarConectadosActionPerformed
         String msj = "GET_CONNECTED\0";
-        (new ThreadListadoUsuarios(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
+        (new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
     }//GEN-LAST:event_jButtonListarConectadosActionPerformed
 
     /**
@@ -385,20 +384,13 @@ public class Interfaz extends javax.swing.JFrame {
         return apodo;
     }
 
-    /**
-     * Tamaño fijo de paquete
-     */
+    private int multicastPort = 6789; // No cambiar! Debe ser el mismo en el servidor.
+    private InetAddress multicastIP;
+    private String strMulticastIP = "225.5.4.3";
     public final static int PACKETSIZE = 65536;
     private int serverPort; // El puerto donde corre el servidor. Se lee desde la interfaz
     private InetAddress serverIP; // La IP donde corre el servidor. Se lee desde la interfaz
-    /**
-     * Socket utilizado para mensajes que no sean de login (logout, message,
-     * private_message)
-     */
-    public DatagramSocket socketUnicastListadoUsuarios;
-    /**
-     * Socket utilizado para login y escuchar mensajes privados
-     */
+    public MulticastSocket socketMulticast;
     public DatagramSocket socketUnicast; // El socket para recibir y enviar mansajes unicast.
     private final String strDesconectado = "<html><font color='red'>Desconectado</font></html>";
     private final String strEnLinea = "<html><font color='green'>En línea</font></html>";
@@ -407,7 +399,7 @@ public class Interfaz extends javax.swing.JFrame {
     private String apodo;
     private boolean aplicarConfiabilidad = false;
     private Multicast multicastThread;
-    private ListenerPrivados listenerPrivados;
+    private PrivadosUnicast listenerPrivados;
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButtonConectar;
     private javax.swing.JButton jButtonDesconectar;
