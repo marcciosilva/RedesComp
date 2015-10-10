@@ -12,7 +12,7 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import static redes.Interfaz.PACKETSIZE;
+import static redes.Cliente.PACKETSIZE;
 
 /**
  * Clase que implementa confiabilidad, para uso de los demás threads de unicast
@@ -40,7 +40,7 @@ public class ConfiabilidadUnicast extends Thread {
                 socketUnicast.send(paquete);
 //                }
             } catch (IOException ex) {
-                Logger.getLogger(Interfaz.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
                 System.err.println(ex.toString());
             }
         } else {

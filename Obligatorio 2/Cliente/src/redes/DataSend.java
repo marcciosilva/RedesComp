@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package redes;
 
 import javax.swing.JOptionPane;
@@ -23,7 +18,7 @@ public class DataSend extends Thread {
      */
     public DataSend(String msj) {
         System.out.println("Datasend: " + msj);
-        Interfaz instance = Interfaz.getInstance();
+        Cliente instance = Cliente.getInstance();
         if (msj.equals("OK")) {
             instance.comunicarOK();
         } else if (msj.equals("NOK")) {
@@ -42,7 +37,7 @@ public class DataSend extends Thread {
             instance.comunicarConectados(msj);
         } else {
             //si es multicast
-            Interfaz.getInstance().updateChat(msj, true, false);
+            Cliente.getInstance().updateChat(msj, true, false);
         }
     }
 

@@ -17,11 +17,11 @@
 
 using namespace std;
 
-#define MAX_MESSAGE_LENGHT 1024 // Tamaño del payload
-#define MAX_NICKNAME_LENGHT 64	// Largo del nickname
-#define MAX_PACKET_SIZE 65536	// Tamaño máximo para un paquete UDP
-#define multicastIP "225.5.4.3" // IP a la que el servidor envía por multicast
-#define multicastPort 6789		// Puerto al que el servidor envía por multicast
+#define MAX_MESSAGE_LENGHT 65506	// (65507 byte - 1 byte RDT header)
+#define MAX_NICKNAME_LENGHT 64		// Largo del nickname
+#define MAX_PACKET_SIZE 65507		// Tamaño máximo para el payload de un paquete UDP (65,535 − 8 byte UDP header − 20 byte IP header)
+#define multicastIP "225.5.4.3"		// IP a la que el servidor envía por multicast
+#define multicastPort 6789			// Puerto al que el servidor envía por multicast
 
 struct cliente {
 	char nick[MAX_NICKNAME_LENGHT];
@@ -44,9 +44,8 @@ int sockUnicast;
 struct sockaddr_in servUnicAddr, unic_cliaddr;
 
 void rdt_send_unicast(char* msj, const sockaddr_in& cli_addr) {
-	int bytes_sent;
 	cout << "rdt_send_unicast message: " << msj << endl;
-	bytes_sent = sendto(sockUnicast, msj, strlen(msj), 0, (struct sockaddr *) &cli_addr, sizeof (cli_addr));
+	sendto(sockUnicast, msj, strlen(msj), 0, (struct sockaddr *) &cli_addr, sizeof (cli_addr));
 	delete [] msj;
 }
 
@@ -105,6 +104,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 			nuevo_cliente.last_seen = time(NULL);
 			lista_clientes.push_back(nuevo_cliente);
 		}
+		
 	} else if (strcmp(comando, "LOGOUT") == 0) {
 		// Envío respuesta al cliente
 		string resp = "GOODBYE";
@@ -302,7 +302,6 @@ void crear_cliente() {
 }
 
 // Testing
-
 void listar_clientes() {
 	lock_guard<mutex> lock(lista_clientes_mutex);
 
