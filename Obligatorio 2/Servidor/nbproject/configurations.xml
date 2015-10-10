@@ -12,11 +12,7 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <logicalFolder name="src" displayName="src" projectFiles="true">
-        <itemPath>src/ejemplo_datagrama.cpp</itemPath>
-        <itemPath>src/servidor.cpp</itemPath>
-        <itemPath>src/viejo.cpp</itemPath>
-      </logicalFolder>
+      <itemPath>main.cpp</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
                    displayName="Test Files"
@@ -30,26 +26,23 @@
       <itemPath>Makefile</itemPath>
     </logicalFolder>
   </logicalFolder>
-  <sourceRootList>
-    <Elem>src</Elem>
-  </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
     <conf name="Debug" type="1">
       <toolsSet>
-        <compilerSet>GNU|GNU</compilerSet>
+        <compilerSet>default</compilerSet>
         <dependencyChecking>true</dependencyChecking>
         <rebuildPropChanged>false</rebuildPropChanged>
       </toolsSet>
       <compileType>
         <ccTool>
-          <commandLine>-std=c++11</commandLine>
+          <commandLine>-pthread -std=c++11</commandLine>
         </ccTool>
         <linkerTool>
-          <commandLine>-lpthread</commandLine>
+          <commandLine>-pthread</commandLine>
         </linkerTool>
       </compileType>
-      <item path="src/servidor.cpp" ex="false" tool="1" flavor2="0">
+      <item path="main.cpp" ex="false" tool="1" flavor2="0">
       </item>
     </conf>
     <conf name="Release" type="1">
@@ -72,11 +65,7 @@
           <developmentMode>5</developmentMode>
         </asmTool>
       </compileType>
-      <item path="src/ejemplo_datagrama.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/servidor.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/viejo.cpp" ex="false" tool="1" flavor2="0">
+      <item path="main.cpp" ex="false" tool="1" flavor2="0">
       </item>
     </conf>
   </confs>
