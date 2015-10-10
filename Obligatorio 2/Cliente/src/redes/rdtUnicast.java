@@ -25,7 +25,7 @@ public class rdtUnicast {
     //private InetAddress serverIP;
 	//private int serverPort;
 	private DatagramSocket socketUnicast;
-	DatagramPacket paquete;
+	//DatagramPacket paquete;
 	DatagramPacket sndpkt;
 	Queue<DatagramPacket> buffer = new LinkedList<>();
 	DatagramPacket in_pck;
@@ -71,6 +71,7 @@ public class rdtUnicast {
 		return isAck == 1;
 	}
 
+
 	private boolean has_seq1(DatagramPacket rcvpkt) {
 		//devuelve true si el numero de secuencia del paquete coincide con 1
 		byte[] bytes = rcvpkt.getData();
@@ -78,6 +79,7 @@ public class rdtUnicast {
 		int seqNum = (int) header & 0x7f;
 		return seqNum == 1;
 	}
+
 
 	private boolean has_seq0(DatagramPacket rcvpkt) {
 		//devuelve true si el numero de secuencia del paquete coincide con 0
@@ -100,7 +102,7 @@ public class rdtUnicast {
 		byte[] pktbytes = new byte[bytes.length + data.length];
 		System.arraycopy(bytes, 0, pktbytes, 0, bytes.length);
 		System.arraycopy(data, 0, pktbytes, bytes.length, data.length);
-		return new DatagramPacket(bytes, bytes.length, serverIP, serverPort);
+		return new DatagramPacket(pktbytes, pktbytes.length, serverIP, serverPort);
 	}
 
 	private DatagramPacket makepkt(boolean is_ACK, int seqNum) {
@@ -116,18 +118,18 @@ public class rdtUnicast {
 		return new DatagramPacket(bytes, bytes.length);
 	}
 
-	public void rdt_send(String msj, InetAddress serverIP, int serverPort) {
+	public void rdt_send(DatagramSocket socketUnicast, DatagramPacket paquete, InetAddress serverIP, int serverPort) {
                 // hay que ver que se hace si me llega un mensaje privado mientras
 		// estoy aca -lo guardo en un buffer?
 		// y en el rdt_recieve antes de hacer nada que se fije si tiene cosas en ese buffer?
-		data = msj.getBytes();
+		//data = msj.getBytes();
 		try {
 			boolean salir = false;
 			while (!salir) {
 
 				if (estadoS == EstadoSender.ESPERO_DATA_0) {
 					// creo paquete para enviar a partir del string con numero de secuencia 0
-					paquete = makeDatapkt(false, 0, data, serverIP, serverPort);
+					//paquete = makeDatapkt(false, 0, data, serverIP, serverPort);
 					socketUnicast.send(paquete);
 					socketUnicast.setSoTimeout(TIMEOUT);
 					estadoS = EstadoSender.ESPERO_ACK_0;
@@ -161,7 +163,7 @@ public class rdtUnicast {
 
 				} else if (estadoS == EstadoSender.ESPERO_DATA_1) {
 					// creo paquete para enviar a partir del string con numero de secuencia 1
-					paquete = makeDatapkt(false, 1, data, serverIP, serverPort);
+					//paquete = makeDatapkt(false, 1, data, serverIP, serverPort);
 					socketUnicast.send(paquete);
 					//start timer de 1
 					socketUnicast.setSoTimeout(TIMEOUT);
@@ -201,7 +203,7 @@ public class rdtUnicast {
 
 	}
 
-	private String rdt_rcv(DatagramPacket rcvpkt) {
+	public String rdt_rcv(DatagramSocket socketUnicast, DatagramPacket rcvpkt) {
 
 		boolean salir = false;
 		String strMensaje = null;
