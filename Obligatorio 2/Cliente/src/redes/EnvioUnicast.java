@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JOptionPane;
 
 /**
  * Thread para mensajes que no involucran login o escucha de mensajes privados.
@@ -17,7 +18,7 @@ import java.util.logging.Logger;
  *
  * @author marccio
  */
-public class ThreadMensajesListado extends ConfiabilidadUnicast {
+public class EnvioUnicast extends ConfiabilidadUnicast {
 
     String msj;
 
@@ -30,7 +31,7 @@ public class ThreadMensajesListado extends ConfiabilidadUnicast {
      * @param serverIP Dirección IP del servidor
      * @param serverPort Puerto donde escucha el servidor
      */
-    public ThreadMensajesListado(boolean confiabilidad, String msj, InetAddress serverIP, int serverPort) {
+    public EnvioUnicast(boolean confiabilidad, String msj, InetAddress serverIP, int serverPort) {
         this.confiabilidad = confiabilidad;
         this.msj = msj;
         this.serverIP = serverIP;
@@ -39,17 +40,7 @@ public class ThreadMensajesListado extends ConfiabilidadUnicast {
 
     @Override
     public void run() {
-        socketUnicast = Interfaz.getInstance().getSocketOtros();
-        synchronized (socketUnicast) {
-            rdt_send(msj);
-            if (msj.contains("GET_CONNECTED")) {
-                try {
-                    //voy a precisar recibir una respuesta también
-                    rdt_rcv();
-                } catch (IOException ex) {
-                    Logger.getLogger(ThreadMensajesListado.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            }
-        }
+        socketUnicast = Interfaz.getInstance().getUnicastSocket();
+        rdt_send(msj);
     }
 }

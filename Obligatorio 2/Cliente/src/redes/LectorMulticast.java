@@ -2,7 +2,6 @@ package redes;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
-import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.util.Arrays;
 import java.util.logging.Level;
@@ -15,13 +14,9 @@ import static redes.Interfaz.PACKETSIZE;
  *
  * @author marccio
  */
-public class Multicast extends Thread {
+public class LectorMulticast extends Thread {
 
-    private InetAddress multicastIP;
-    private int multicastPort = 6789; // No cambiar! Debe ser el mismo en el servidor.
-    private String strMulticastIP = "225.5.4.3";
     private MulticastSocket socketMulticast;
-    boolean conexionActiva = false;
     private Estado estado;
     int paso;
     DatagramPacket sndpkt; //ultimo paquete enviado
@@ -37,35 +32,13 @@ public class Multicast extends Thread {
      *
      * @param confiabilidad Si se pasa true, se aplica rdt para multicast
      */
-    public Multicast(boolean confiabilidad) {
+    public LectorMulticast(boolean confiabilidad) {
         this.confiabilidad = confiabilidad;
         // Este es el thread que va a escuchar por nuevos mensajes y mostrarlos en el area del chat.
-        try {
-            //inicializo máquina de estados
-            //espero numero de secuencia 0 de la capa inferior
-            estado = Estado.ESPERO_0;
-            paso = 0;
-            //inicializo socket multicast
-            // Fijo la dirección ip y el puerto de donde voy a escuchar los mensajes. IP 225.5.4.<nro_grupo> puerto 6789
-            multicastIP = InetAddress.getByName(strMulticastIP);
-            socketMulticast = new MulticastSocket(multicastPort);
-            socketMulticast.joinGroup(multicastIP);
-            // Loop
-            conexionActiva = true;
-        } catch (IOException ex) {
-            Logger.getLogger(Multicast.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-
-    /**
-     * Se termina la conexión del thread con el grupo multicast; se cierra el
-     * socket
-     */
-    public void terminarConexion() {
-        if (socketMulticast != null && !socketMulticast.isClosed()) {
-            socketMulticast.close();
-        }
-        conexionActiva = false;
+        //inicializo máquina de estados
+        //espero numero de secuencia 0 de la capa inferior
+        estado = Estado.ESPERO_0;
+        paso = 0;
     }
 
     private boolean is_not_ACK(DatagramPacket rcvpkt) {
@@ -148,7 +121,7 @@ public class Multicast extends Thread {
                     }
                 }
             } catch (IOException ex) {
-                Logger.getLogger(Multicast.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(LectorMulticast.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
         //genero un thread de DataSend con el mensaje que extraje del paquete
@@ -158,7 +131,8 @@ public class Multicast extends Thread {
 
     @Override
     public void run() {
-        while (conexionActiva) {
+        socketMulticast = Interfaz.getInstance().getMulticastSocket();
+        while (true) {
             byte[] buffer = new byte[PACKETSIZE];
             DatagramPacket paquete = new DatagramPacket(buffer, buffer.length);
             //variable booleana para determinar si usar rdt o no
@@ -173,7 +147,11 @@ public class Multicast extends Thread {
                     System.out.println("Multicast: " + strMensaje);
                     (new DataSend(strMensaje)).start();
                 } catch (IOException ex) {
-                    Logger.getLogger(Multicast.class.getName()).log(Level.SEVERE, null, ex);
+					try {
+						this.join();
+					} catch (InterruptedException ex1) {
+						Logger.getLogger(LectorMulticast.class.getName()).log(Level.SEVERE, null, ex1);
+					}
                 }
             }
         }

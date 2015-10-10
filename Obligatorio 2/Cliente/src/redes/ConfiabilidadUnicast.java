@@ -36,9 +36,9 @@ public class ConfiabilidadUnicast extends Thread {
             byte[] data = msj.getBytes();
             DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
             try {
-                synchronized (socketUnicast) {
-                    socketUnicast.send(paquete);
-                }
+//                synchronized (socketUnicast) {
+                socketUnicast.send(paquete);
+//                }
             } catch (IOException ex) {
                 Logger.getLogger(Interfaz.class.getName()).log(Level.SEVERE, null, ex);
                 System.err.println(ex.toString());
@@ -56,27 +56,15 @@ public class ConfiabilidadUnicast extends Thread {
      */
     public void rdt_rcv() throws IOException {
         if (!confiabilidad) {
-            try {
                 byte[] data = new byte[PACKETSIZE];
                 DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
                 // Espero por una respuesta con timeout de 2 segundos
-                synchronized (socketUnicast) {
-                    socketUnicast.setSoTimeout(2000);
-                    socketUnicast.receive(paquete);
-                }
+//                socketUnicast.setSoTimeout(2000);
+                socketUnicast.receive(paquete);
                 // Convierto el byte [] de la respuesta en un String y se lo paso
                 // a DataSend para que vea que hacer con él
                 String msj = new String(paquete.getData()).split("\0")[0];
-                System.out.println("Unicast: " + msj);
                 (new DataSend(msj)).start();
-            } catch (SocketException ex) {
-//                Logger.getLogger(ListenerPrivados.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (IOException ex) {
-                //tiro la excepcion hacia fuera para manejarla desde los threads,
-                //por ejemplo cuando necesito tirar un popup porque no se recibió
-                //mensaje de respuesta al LOGIN
-                throw ex;
-            }
         } else {
             //TODO
         }

@@ -17,11 +17,11 @@
 
 using namespace std;
 
-// Estructura de datos compartida por todos los threads
-
 #define MAX_MESSAGE_LENGHT 1024 // Tamaño del payload
 #define MAX_NICKNAME_LENGHT 64	// Largo del nickname
 #define MAX_PACKET_SIZE 65536	// Tamaño máximo para un paquete UDP
+#define multicastIP "225.5.4.3" // IP a la que el servidor envía por multicast
+#define multicastPort 6789		// Puerto al que el servidor envía por multicast
 
 struct cliente {
 	char nick[MAX_NICKNAME_LENGHT];
@@ -35,7 +35,7 @@ vector<cliente> lista_clientes;
 // Variables del socket multicast
 int sockMulticast;
 struct in_addr iaddr;
-struct sockaddr_in servMulticAddr, multic_cliaddr;
+struct sockaddr_in servMulticAddr, servMulticInterface, multic_cliaddr;
 unsigned char ttl = 5;
 unsigned char one = 1;
 
@@ -44,8 +44,9 @@ int sockUnicast;
 struct sockaddr_in servUnicAddr, unic_cliaddr;
 
 void rdt_send_unicast(char* msj, const sockaddr_in& cli_addr) {
+	int bytes_sent;
 	cout << "rdt_send_unicast message: " << msj << endl;
-	sendto(sockUnicast, msj, sizeof (msj), 0, (struct sockaddr *) &cli_addr, sizeof (cli_addr));
+	bytes_sent = sendto(sockUnicast, msj, strlen(msj), 0, (struct sockaddr *) &cli_addr, sizeof (cli_addr));
 	delete [] msj;
 }
 
@@ -55,11 +56,11 @@ void rdt_send_multicast(char* msj) {
 	delete [] msj;
 }
 
-void deliver_message(char* msj, const sockaddr_in& cli_addr) {
+void deliver_message(char* msj, const sockaddr_in cli_addr) {
 	lock_guard<mutex> lock(lista_clientes_mutex); // el lock se libera automáticamente al finalizar el bloque
 	char * comando = strtok(msj, " ");
 
-	cout << "Dentro del deliver_message." << endl;
+	cout << "Se recibió mensaje unicast." << endl;
 	cout << "Comando: " << comando << endl;
 	cout << "IP: " << inet_ntoa(cli_addr.sin_addr) << endl;
 	cout << "Puerto: " << ntohs(cli_addr.sin_port) << endl;
@@ -133,6 +134,8 @@ void deliver_message(char* msj, const sockaddr_in& cli_addr) {
 		char *resp_ptr = new char[resp.length() + 1];
 		*resp_ptr = 0;
 		strcpy(resp_ptr, resp.c_str());
+		
+		// Envío
 		thread t1(rdt_send_unicast, resp_ptr, cli_addr);
 		t1.detach();
 
@@ -141,7 +144,6 @@ void deliver_message(char* msj, const sockaddr_in& cli_addr) {
 
 		// Creo el cabezal
 		string resp = "RELAYED_MESSAGE ";
-
 		// Busco el nickname del cliente
 		bool encontre = false;
 		vector<cliente>::iterator it = lista_clientes.begin();
@@ -155,17 +157,30 @@ void deliver_message(char* msj, const sockaddr_in& cli_addr) {
 
 		char * resp_ptr = new char[MAX_MESSAGE_LENGHT];
 		*resp_ptr = 0;
+		char * resp_ptr2 = new char[MAX_MESSAGE_LENGHT];
+		*resp_ptr2 = 0;
+
 		strcpy(resp_ptr, resp.c_str());
+		strcpy(resp_ptr2, resp.c_str());
 
 		// Obtengo el texto del mensaje
 		char * mensaje = strchr(msj, '\0') + 1;
 
 		// concateno ambos
 		strcat(resp_ptr, mensaje);
+		strcat(resp_ptr2, mensaje);
 
 		// Envío
 		thread t1(rdt_send_multicast, resp_ptr);
 		t1.detach();
+
+		// Testing solamente (solo cambiar la ip)
+		//		sockaddr_in cliente_over_hamachi;
+		//		cliente_over_hamachi.sin_family = PF_INET;
+		//		cliente_over_hamachi.sin_addr.s_addr = inet_addr("25.0.32.206");
+		//		cliente_over_hamachi.sin_port = htons(6789);
+		//		thread t2(rdt_send_unicast, resp_ptr2, cliente_over_hamachi);
+		//		t2.detach();
 
 	} else if (strcmp(comando, "PRIVATE_MESSAGE") == 0) {
 		// Enviar por unicast el mensaje
@@ -175,29 +190,47 @@ void deliver_message(char* msj, const sockaddr_in& cli_addr) {
 		char * resp_ptr = new char[MAX_MESSAGE_LENGHT];
 		*resp_ptr = 0;
 		strcpy(resp_ptr, resp.c_str());
-		
+
 		// Obtengo el nick del destinatario
 		char * destinatario = strtok(NULL, " ");
-		
+
 		// Obtengo el texto del mensaje
 		char * mensaje = strchr(msj, '\0') + 1;
 
 		// concateno ambos
 		strcat(resp_ptr, mensaje);
 
-		// Busco la dirección del destinatario
-		bool encontre = false;
-		vector<cliente>::iterator it = lista_clientes.begin();
-		while (not encontre && it != lista_clientes.end()) {
-			if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
-				resp = resp + it->nick + " ";
-				encontre = true;
+		// Busco el nick del remitente
+		char * remitente;
+		{
+			bool encontre = false;
+			vector<cliente>::iterator it = lista_clientes.begin();
+			while (not encontre && it != lista_clientes.end()) {
+				if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
+					remitente = it->nick;
+					encontre = true;
+				}
+				it++;
 			}
-			it++;
+		}
+
+		// Busco la dirección del destinatario
+		sockaddr_in dest_addr;
+		{
+			bool encontre = false;
+			vector<cliente>::iterator it = lista_clientes.begin();
+			while (not encontre && it != lista_clientes.end()) {
+				if (strcmp(it->nick, destinatario) == 0) {
+					dest_addr = it->address;
+					encontre = true;
+				}
+				it++;
+			}
 		}
 		
 		// Envío
-		//rdt_send(cabezal_ptr, ip, puerto);
+		thread t1(rdt_send_unicast, resp_ptr, dest_addr);
+		t1.detach();
 	}
 };
 
@@ -206,11 +239,8 @@ void rdt_rcv_unicast() {
 	// Para guardar la dirección del cliente
 	struct sockaddr_in si_cliente;
 	int slen = sizeof (si_cliente);
-	int i = 1;
 
 	while (true) {
-		cout << "Esperando mensaje unicast nro " << i << endl;
-		i++;
 		recvfrom(sockUnicast, buffer, MAX_PACKET_SIZE, 0, (struct sockaddr *) &si_cliente, (socklen_t *) & slen);
 		char* temp = buffer;
 		thread t1(deliver_message, temp, si_cliente);
@@ -230,42 +260,45 @@ void unicastSocket_setUp() {
 
 void multicastSocket_setUp() {
 	// Creo el socket UDP
-	memset(&servMulticAddr, 0, sizeof (struct sockaddr_in));
 	sockMulticast = socket(PF_INET, SOCK_DGRAM, 0);
 	if (sockMulticast < 0) perror("Error creating socket");
 
-	servMulticAddr.sin_family = PF_INET;
-	servMulticAddr.sin_port = htons(0); // No cambiar! Debe ser el que use el cliente para enviar sus ACK
-	servMulticAddr.sin_addr.s_addr = htonl(INADDR_ANY); // bind socket to any interface
-	int status = bind(sockMulticast, (struct sockaddr *) &servMulticAddr, (socklen_t)sizeof (servMulticAddr));
+	memset(&servMulticAddr, 0, sizeof (struct sockaddr_in));
+	memset(&servMulticInterface, 0, sizeof (struct sockaddr_in));
+
+	// Set local interface address
+	servMulticInterface.sin_family = PF_INET;
+	servMulticInterface.sin_port = htons(0);
+	servMulticInterface.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	// Bind socket to local interface
+	int status = bind(sockMulticast, (struct sockaddr *) &servMulticInterface, (socklen_t)sizeof (servMulticInterface));
 	if (status < 0) perror("Error binding socket to interface");
-
-	memset(&iaddr, 0, sizeof (struct in_addr));
-	iaddr.s_addr = INADDR_ANY; // use DEFAULT interface
-
-	// Set the outgoing interface to DEFAULT
-	setsockopt(sockMulticast, IPPROTO_IP, IP_MULTICAST_IF, &iaddr, sizeof (struct in_addr));
 
 	// Set multicast packet TTL; default TTL is 1
 	setsockopt(sockMulticast, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof (unsigned char));
 
-	// Send multicast traffic to myself too (sirve para el testing si se corren el cliente y el servidor en el mismo host)
-	setsockopt(sockMulticast, IPPROTO_IP, IP_MULTICAST_LOOP, &one, sizeof (unsigned char));
-
 	// Set destination address
 	servMulticAddr.sin_family = PF_INET;
-	servMulticAddr.sin_addr.s_addr = inet_addr("225.5.4.3");
-	servMulticAddr.sin_port = htons(6789); // No cambiar! Debe ser el mismo que use el cliente para recibir
+	servMulticAddr.sin_addr.s_addr = inet_addr(multicastIP);
+	servMulticAddr.sin_port = htons(multicastPort);
 }
 
 void crear_cliente() {
 	cliente c;
 	c.last_seen = time(NULL);
 	strcpy(c.nick, "gaston");
+	memset(&c.address, 0, sizeof (struct sockaddr_in));
+	//c.address.sin_family = PF_INET;
+	//c.address.sin_addr.s_addr = inet_addr("127.0.0.1");
+	//c.address.sin_port = htons(multicastPort);
 
+	// Lo agrego a la lista de clientes
 	lock_guard<mutex> lock(lista_clientes_mutex);
 	lista_clientes.push_back(c);
 }
+
+// Testing
 
 void listar_clientes() {
 	lock_guard<mutex> lock(lista_clientes_mutex);
@@ -278,8 +311,10 @@ void listar_clientes() {
 int main(int argc, char** argv) {
 	unicastSocket_setUp();
 	multicastSocket_setUp();
+
 	crear_cliente();
-	listar_clientes();
+
+	// El método que está en loop escuchando
 	rdt_rcv_unicast();
 
 	return 0;
