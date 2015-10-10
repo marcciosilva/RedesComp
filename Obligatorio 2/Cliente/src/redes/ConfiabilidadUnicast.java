@@ -44,7 +44,10 @@ public class ConfiabilidadUnicast extends Thread {
                 System.err.println(ex.toString());
             }
         } else {
-
+            byte[] data = msj.getBytes();
+            DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
+            rdtUnicast rdt = new rdtUnicast();
+            rdt.rdt_send(socketUnicast, msj, serverIP, serverPort);
         }
     }
 
@@ -67,6 +70,12 @@ public class ConfiabilidadUnicast extends Thread {
                 (new DataSend(msj)).start();
         } else {
             //TODO
+            System.out.println("kkkkkmmkm");
+            byte[] data = new byte[PACKETSIZE];
+            DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
+            rdtUnicast rdt = new rdtUnicast();
+            String msj = rdt.rdt_rcv(socketUnicast, paquete).split("\0")[0];
+            (new DataSend(msj)).start();
         }
     }
 

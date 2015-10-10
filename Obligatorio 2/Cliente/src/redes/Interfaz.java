@@ -335,10 +335,12 @@ public class Interfaz extends javax.swing.JFrame {
 				socketUnicast = new DatagramSocket();
                 //inicializo el listener unicast para ya poder recibir
 				//respuesta del LOGIN
+                                String msj = "LOGIN " + apodo + "\0";
+				(new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
 				listenerUnicast = new LectorUnicast(aplicarConfiabilidad, serverIP, serverPort);
 				listenerUnicast.start();
-				String msj = "LOGIN " + apodo + "\0";
-				(new EnvioUnicast(false, msj, serverIP, serverPort)).start();
+				
+                                System.out.println("mande");
 			} catch (SocketException ex) {
 				Logger.getLogger(Interfaz.class.getName()).log(Level.SEVERE, null, ex);
 			}
@@ -444,7 +446,7 @@ public class Interfaz extends javax.swing.JFrame {
 	private byte[] data = new byte[PACKETSIZE]; // El mansaje se manda como byte[], esto es lo que incluye en el paquete
 	private boolean conectado = false;
 	private String apodo;
-	private boolean aplicarConfiabilidad = false;
+	private boolean aplicarConfiabilidad = true;
 	private LectorMulticast multicastThread;
 	private LectorUnicast listenerUnicast;
     // Variables declaration - do not modify//GEN-BEGIN:variables

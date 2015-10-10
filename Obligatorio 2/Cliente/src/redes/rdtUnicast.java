@@ -23,13 +23,13 @@ import java.util.logging.Logger;
  */
 public class rdtUnicast {
      
-    private final static int TIMEOUT = 2000;
+    private final static int TIMEOUT = 5000;
     public final static int PACKETSIZE = 65536;
     private byte[] ack = new byte[PACKETSIZE];
     private byte[] data = new byte[PACKETSIZE];
     //private InetAddress serverIP;
     //private int serverPort;
-    private DatagramSocket socketUnicast;
+    //private DatagramSocket socketUnicast;
     DatagramPacket paquete;
     DatagramPacket sndpkt;
     Queue<DatagramPacket> buffer = new LinkedList<DatagramPacket>();
@@ -103,7 +103,7 @@ public class rdtUnicast {
         byte[] pktbytes = new byte[bytes.length + data.length];
         System.arraycopy(bytes, 0, pktbytes, 0, bytes.length);
         System.arraycopy(data, 0, pktbytes, bytes.length, data.length);
-        return new DatagramPacket(bytes, bytes.length, serverIP, serverPort);
+        return new DatagramPacket(pktbytes, pktbytes.length, serverIP, serverPort);
     }
 
     private DatagramPacket makepkt(boolean is_ACK, int seqNum) {
@@ -119,7 +119,7 @@ public class rdtUnicast {
         return new DatagramPacket(bytes, bytes.length);
     }
 
-    public void rdt_send(String msj, InetAddress serverIP, int serverPort) {
+    public void rdt_send(DatagramSocket socketUnicast, String msj, InetAddress serverIP, int serverPort) {
                 // hay que ver que se hace si me llega un mensaje privado mientras
         // estoy aca -lo guardo en un buffer?
         // y en el rdt_recieve antes de hacer nada que se fije si tiene cosas en ese buffer?
@@ -204,7 +204,7 @@ public class rdtUnicast {
 
     }
 
-    private String rdt_rcv(DatagramPacket rcvpkt) {
+    public String rdt_rcv(DatagramSocket socketUnicast, DatagramPacket rcvpkt) {
 
         boolean salir = false;
         String strMensaje = null;
