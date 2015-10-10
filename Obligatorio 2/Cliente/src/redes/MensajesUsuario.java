@@ -17,7 +17,7 @@ import java.util.logging.Logger;
  *
  * @author marccio
  */
-public class LoginLogout extends ConfiabilidadUnicast {
+public class MensajesUsuario extends ConfiabilidadUnicast {
 
     String msj;
 
@@ -30,7 +30,7 @@ public class LoginLogout extends ConfiabilidadUnicast {
      * @param serverIP Dirección IP del servidor
      * @param serverPort Puerto donde escucha el servidor
      */
-    public LoginLogout(boolean confiabilidad, String msj, InetAddress serverIP, int serverPort) {
+    public MensajesUsuario(boolean confiabilidad, String msj, InetAddress serverIP, int serverPort) {
         this.confiabilidad = confiabilidad;
         this.msj = msj;
         this.serverIP = serverIP;
@@ -40,16 +40,19 @@ public class LoginLogout extends ConfiabilidadUnicast {
     @Override
     public void run() {
         socketUnicast = Interfaz.getInstance().getUnicastSocket();
+        //pido acceso exclusivo al socket porque voy a tener que enviar y
+        //recibir una respuesta; para que no joda el thread que escucha
+        //privados
         synchronized (socketUnicast) {
+//            if (msj.contains("LOGIN") || msj.contains("LOGOUT" || msj.contains("MESSAGE"))) {
             rdt_send(msj);
-            if (msj.contains("LOGIN") || msj.contains("LOGOUT")) {
-                try {
-                    //voy a precisar recibir una respuesta también
-                    rdt_rcv();
-                } catch (IOException ex) {
-                    Logger.getLogger(ThreadMensajesListado.class.getName()).log(Level.SEVERE, null, ex);
-                }
+            try {
+                //voy a precisar recibir una respuesta también
+                rdt_rcv();
+            } catch (IOException ex) {
+                Logger.getLogger(ThreadListadoUsuarios.class.getName()).log(Level.SEVERE, null, ex);
             }
+//            }
         }
     }
 }
