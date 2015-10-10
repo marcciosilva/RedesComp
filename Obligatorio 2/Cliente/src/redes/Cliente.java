@@ -11,6 +11,7 @@ import java.net.UnknownHostException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
+import javax.swing.text.DefaultCaret;
 import org.apache.commons.validator.routines.InetAddressValidator;
 
 /**
@@ -196,8 +197,11 @@ public class Cliente extends javax.swing.JFrame {
         jTextAreaChat.setLineWrap(true);
         jTextAreaChat.setRows(5);
         jTextAreaChat.setWrapStyleWord(true);
+        jTextAreaChat.setCursor(new java.awt.Cursor(java.awt.Cursor.TEXT_CURSOR));
         jTextAreaChat.setEnabled(false);
         jTextAreaChat.setFocusable(false);
+        DefaultCaret caret = (DefaultCaret) jTextAreaChat.getCaret();
+        caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
         jScrollPane1.setViewportView(jTextAreaChat);
 
         getContentPane().add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 30, 310, 290));
@@ -465,7 +469,7 @@ public class Cliente extends javax.swing.JFrame {
 	private final String strEnLinea = "En línea";
 	private boolean conectado = false;
 	private String apodo;
-	private boolean aplicarConfiabilidad = true;
+	private boolean aplicarConfiabilidad = false;
 	private LectorMulticast multicastThread;
 	private LectorUnicast listenerUnicast;
     // Variables declaration - do not modify//GEN-BEGIN:variables
