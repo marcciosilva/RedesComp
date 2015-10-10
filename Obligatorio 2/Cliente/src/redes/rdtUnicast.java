@@ -22,7 +22,7 @@ import java.util.logging.Logger;
  * @author User
  */
 public class rdtUnicast {
-    
+     
     private final static int TIMEOUT = 2000;
     public final static int PACKETSIZE = 65536;
     private byte[] ack = new byte[PACKETSIZE];
