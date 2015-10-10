@@ -346,7 +346,7 @@ public class Cliente extends javax.swing.JFrame {
 				listenerUnicast = new LectorUnicast(aplicarConfiabilidad, serverIP, serverPort);
 				listenerUnicast.start();
 				String msj = "LOGIN " + apodo + "\0";
-				(new EnvioUnicast(false, msj, serverIP, serverPort)).start();
+				(new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
 			} catch (SocketException ex) {
 				Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
 			}
@@ -464,7 +464,7 @@ public class Cliente extends javax.swing.JFrame {
 	private final String strEnLinea = "En línea";
 	private boolean conectado = false;
 	private String apodo;
-	private boolean aplicarConfiabilidad = false;
+	private boolean aplicarConfiabilidad = true;
 	private LectorMulticast multicastThread;
 	private LectorUnicast listenerUnicast;
     // Variables declaration - do not modify//GEN-BEGIN:variables
