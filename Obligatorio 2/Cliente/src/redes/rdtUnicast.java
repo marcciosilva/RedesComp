@@ -21,11 +21,11 @@ public class rdtUnicast {
 	private final static int TIMEOUT = 2000;
 	public final static int PACKETSIZE = 65536;
 	private byte[] ack = new byte[PACKETSIZE];
-	private byte[] data = new byte[PACKETSIZE];
+	//private byte[] data = new byte[PACKETSIZE];
     //private InetAddress serverIP;
 	//private int serverPort;
 	private DatagramSocket socketUnicast;
-	//DatagramPacket paquete;
+	DatagramPacket paqueteRDT;
 	DatagramPacket sndpkt;
 	Queue<DatagramPacket> buffer = new LinkedList<>();
 	DatagramPacket in_pck;
@@ -89,7 +89,7 @@ public class rdtUnicast {
 		return seqNum == 0;
 	}
 
-	private DatagramPacket makeDatapkt(boolean is_ACK, int seqNum, byte[] data, InetAddress serverIP, int serverPort) {
+	private DatagramPacket makeDatapkt(boolean is_ACK, int seqNum, DatagramPacket paquete) {
 		//armar paquete a enviar
 		byte header = (byte) seqNum;
 		if (is_ACK) {
@@ -99,10 +99,10 @@ public class rdtUnicast {
 		}
 		byte bytes[] = {header};
 		//junto el cabezal con el msj
-		byte[] pktbytes = new byte[bytes.length + data.length];
+		byte[] pktbytes = new byte[bytes.length + paquete.getData().length];
 		System.arraycopy(bytes, 0, pktbytes, 0, bytes.length);
-		System.arraycopy(data, 0, pktbytes, bytes.length, data.length);
-		return new DatagramPacket(pktbytes, pktbytes.length, serverIP, serverPort);
+		System.arraycopy(paquete.getData(), 0, pktbytes, bytes.length, paquete.getData().length);
+		return new DatagramPacket(pktbytes, pktbytes.length, paquete.getAddress(), paquete.getPort());
 	}
 
 	private DatagramPacket makepkt(boolean is_ACK, int seqNum) {
@@ -118,18 +118,17 @@ public class rdtUnicast {
 		return new DatagramPacket(bytes, bytes.length);
 	}
 
-	public void rdt_send(DatagramSocket socketUnicast, DatagramPacket paquete, InetAddress serverIP, int serverPort) {
+	public void rdt_send(DatagramSocket socketUnicast, DatagramPacket paquete) {
                 // hay que ver que se hace si me llega un mensaje privado mientras
 		// estoy aca -lo guardo en un buffer?
 		// y en el rdt_recieve antes de hacer nada que se fije si tiene cosas en ese buffer?
-		//data = msj.getBytes();
 		try {
 			boolean salir = false;
 			while (!salir) {
 
 				if (estadoS == EstadoSender.ESPERO_DATA_0) {
 					// creo paquete para enviar a partir del string con numero de secuencia 0
-					//paquete = makeDatapkt(false, 0, data, serverIP, serverPort);
+					paqueteRDT = makeDatapkt(false, 0, paquete);
 					socketUnicast.send(paquete);
 					socketUnicast.setSoTimeout(TIMEOUT);
 					estadoS = EstadoSender.ESPERO_ACK_0;
@@ -151,6 +150,7 @@ public class rdtUnicast {
 						timeout0Sender = false;
 
 					} else if (is_ACK(in_pck) && (has_seq0(in_pck))) {
+                                                System.out.println("ack");
 						// stop timer de 0
 						socketUnicast.setSoTimeout(0);
 						estadoS = EstadoSender.ESPERO_DATA_1;
@@ -158,7 +158,8 @@ public class rdtUnicast {
 						pasoSender = 1;
 
 					} else if (is_not_ACK(in_pck)) { //me llego un mensaje privado del servidor, lo mando al buche
-						buffer.add(in_pck);
+                                            System.out.println("noack");
+                                            buffer.add(in_pck);
 					}
 
 				} else if (estadoS == EstadoSender.ESPERO_DATA_1) {

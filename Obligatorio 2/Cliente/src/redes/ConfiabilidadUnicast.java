@@ -47,7 +47,7 @@ public class ConfiabilidadUnicast extends Thread {
             byte[] data = msj.getBytes();
             DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
             rdtUnicast rdt = new rdtUnicast();
-            rdt.rdt_send(socketUnicast, paquete, serverIP, serverPort);
+            rdt.rdt_send(socketUnicast, paquete);
         }
     }
 
