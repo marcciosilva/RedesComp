@@ -33,7 +33,9 @@ public class DataSend extends Thread {
                     + "\nPor favor seleccione otro apodo.",
                     "Cliente",
                     JOptionPane.INFORMATION_MESSAGE);
-            instance.limpiarAreaChat();
+            instance.comunicarNoOk();
+            //limpio chat
+            instance.updateChat(null, false, true);
         } else if (msj.equals("GOODBYE")) {
             instance.terminarConexion();
         } else if (msj.contains("CONNECTED")) {
