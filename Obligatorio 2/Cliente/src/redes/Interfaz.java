@@ -100,7 +100,7 @@ public class Interfaz extends javax.swing.JFrame {
 		}
 		if (jTextAreaChat.isEnabled() && !msj.equals("")) {
 			jTextAreaChat.append(msj + "\n");
-			jTextAreaChat.updateUI();
+			//jTextAreaChat.updateUI();
 		}
 	}
 
