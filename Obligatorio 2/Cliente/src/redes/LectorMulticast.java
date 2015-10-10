@@ -14,7 +14,7 @@ import static redes.Interfaz.PACKETSIZE;
  *
  * @author marccio
  */
-public class Multicast extends Thread {
+public class LectorMulticast extends Thread {
 
     private MulticastSocket socketMulticast;
     private Estado estado;
@@ -32,7 +32,7 @@ public class Multicast extends Thread {
      *
      * @param confiabilidad Si se pasa true, se aplica rdt para multicast
      */
-    public Multicast(boolean confiabilidad) {
+    public LectorMulticast(boolean confiabilidad) {
         this.confiabilidad = confiabilidad;
         // Este es el thread que va a escuchar por nuevos mensajes y mostrarlos en el area del chat.
         //inicializo máquina de estados
@@ -121,7 +121,7 @@ public class Multicast extends Thread {
                     }
                 }
             } catch (IOException ex) {
-                Logger.getLogger(Multicast.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(LectorMulticast.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
         //genero un thread de DataSend con el mensaje que extraje del paquete
@@ -147,7 +147,7 @@ public class Multicast extends Thread {
                     System.out.println("Multicast: " + strMensaje);
                     (new DataSend(strMensaje)).start();
                 } catch (IOException ex) {
-                    Logger.getLogger(Multicast.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(LectorMulticast.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         }

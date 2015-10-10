@@ -69,8 +69,8 @@ public class Interfaz extends javax.swing.JFrame {
             }
 
             //mato thread que escucha privados y sirvió para el login
-            if (listenerPrivados != null && listenerPrivados.isAlive()) {
-                listenerPrivados.join(0, 1); // Hay que matar al proceso así porque está bloqueado recibiendo
+            if (listenerUnicast != null && listenerUnicast.isAlive()) {
+                listenerUnicast.join(0, 1); // Hay que matar al proceso así porque está bloqueado recibiendo
             }
 
             //mato al socket unicast
@@ -144,7 +144,7 @@ public class Interfaz extends javax.swing.JFrame {
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Cliente de Chat - Redes 2015");
-        setMinimumSize(new java.awt.Dimension(500, 380));
+        setMinimumSize(new java.awt.Dimension(600, 480));
         setResizable(false);
         setSize(new java.awt.Dimension(500, 380));
         addWindowListener(new java.awt.event.WindowAdapter() {
@@ -156,20 +156,20 @@ public class Interfaz extends javax.swing.JFrame {
 
         jLabelHostIP.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         jLabelHostIP.setText("Host IP:");
-        getContentPane().add(jLabelHostIP, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 30, 70, -1));
+        getContentPane().add(jLabelHostIP, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 50, 70, -1));
 
         jLabelPort.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         jLabelPort.setText("Port:");
-        getContentPane().add(jLabelPort, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 70, 70, -1));
+        getContentPane().add(jLabelPort, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 90, 70, -1));
 
         jLabelApodo.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         jLabelApodo.setText("Apodo:");
-        getContentPane().add(jLabelApodo, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 110, 70, -1));
-        getContentPane().add(jTextFieldHostIP, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 30, 120, -1));
+        getContentPane().add(jLabelApodo, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 130, 70, -1));
+        getContentPane().add(jTextFieldHostIP, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 50, 120, -1));
         jTextFieldHostIP.setText("127.0.0.1");
-        getContentPane().add(jTextFieldPort, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 70, 60, -1));
+        getContentPane().add(jTextFieldPort, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 90, 60, -1));
         jTextFieldPort.setText("54321");
-        getContentPane().add(jTextFieldApodo, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 110, 120, -1));
+        getContentPane().add(jTextFieldApodo, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 130, 120, -1));
         jTextFieldApodo.setText("anonimo");
 
         jButtonConectar.setText("Conectar");
@@ -178,7 +178,7 @@ public class Interfaz extends javax.swing.JFrame {
                 jButtonConectarActionPerformed(evt);
             }
         });
-        getContentPane().add(jButtonConectar, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 210, -1, -1));
+        getContentPane().add(jButtonConectar, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 230, -1, -1));
 
         jButtonDesconectar.setText("Desconectar");
         jButtonDesconectar.setEnabled(false);
@@ -187,23 +187,25 @@ public class Interfaz extends javax.swing.JFrame {
                 jButtonDesconectarActionPerformed(evt);
             }
         });
-        getContentPane().add(jButtonDesconectar, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 210, -1, -1));
+        getContentPane().add(jButtonDesconectar, new org.netbeans.lib.awtextra.AbsoluteConstraints(180, 230, -1, -1));
 
         jTextAreaChat.setColumns(16);
+        jTextAreaChat.setLineWrap(true);
         jTextAreaChat.setRows(5);
+        jTextAreaChat.setWrapStyleWord(true);
         jTextAreaChat.setEnabled(false);
         jTextAreaChat.setFocusable(false);
         jScrollPane1.setViewportView(jTextAreaChat);
 
-        getContentPane().add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(270, 30, 190, 240));
+        getContentPane().add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(340, 40, 190, 240));
 
         jLabelStatus.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabelStatus.setText(strDesconectado);
-        getContentPane().add(jLabelStatus, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 250, 100, 20));
+        getContentPane().add(jLabelStatus, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 270, 100, 20));
 
         jTextFieldMensaje.setText("Ingrese su mensaje aquí");
         jTextFieldMensaje.setEnabled(false);
-        getContentPane().add(jTextFieldMensaje, new org.netbeans.lib.awtextra.AbsoluteConstraints(24, 310, 350, -1));
+        getContentPane().add(jTextFieldMensaje, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 400, 350, -1));
 
         jButtonEnviar.setText("Enviar");
         jButtonEnviar.setEnabled(false);
@@ -212,7 +214,7 @@ public class Interfaz extends javax.swing.JFrame {
                 jButtonEnviarActionPerformed(evt);
             }
         });
-        getContentPane().add(jButtonEnviar, new org.netbeans.lib.awtextra.AbsoluteConstraints(400, 310, -1, -1));
+        getContentPane().add(jButtonEnviar, new org.netbeans.lib.awtextra.AbsoluteConstraints(480, 400, -1, -1));
 
         jButtonListarConectados.setText("Listar usuarios conectados");
         jButtonListarConectados.setEnabled(false);
@@ -221,7 +223,7 @@ public class Interfaz extends javax.swing.JFrame {
                 jButtonListarConectadosActionPerformed(evt);
             }
         });
-        getContentPane().add(jButtonListarConectados, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 160, 190, -1));
+        getContentPane().add(jButtonListarConectados, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 180, 190, -1));
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -235,17 +237,13 @@ public class Interfaz extends javax.swing.JFrame {
      */
     public void comunicarOK() {
         try {
-            //El listener va a intentar loguearse primero, y después va a escuchar mensajes privados
-            listenerPrivados = new PrivadosUnicast(aplicarConfiabilidad, serverIP, serverPort);
-            listenerPrivados.start();
-
             // Corro el listener
             //inicializo socket multicast
             // Fijo la dirección ip y el puerto de donde voy a escuchar los mensajes. IP 225.5.4.<nro_grupo> puerto 6789
             multicastIP = InetAddress.getByName(strMulticastIP);
             socketMulticast = new MulticastSocket(multicastPort);
             socketMulticast.joinGroup(multicastIP);
-            multicastThread = new Multicast(aplicarConfiabilidad);
+            multicastThread = new LectorMulticast(aplicarConfiabilidad);
             multicastThread.start();
 
             conectado = true;
@@ -316,6 +314,10 @@ public class Interfaz extends javax.swing.JFrame {
             try {
                 //inicializo socket de login
                 socketUnicast = new DatagramSocket();
+                //inicializo el listener unicast para ya poder recibir
+                //respuesta del LOGIN
+                listenerUnicast = new LectorUnicast(aplicarConfiabilidad, serverIP, serverPort);
+                listenerUnicast.start();
                 String msj = "LOGIN " + apodo + "\0";
                 (new EnvioUnicast(false, msj, serverIP, serverPort)).start();
             } catch (SocketException ex) {
@@ -398,8 +400,8 @@ public class Interfaz extends javax.swing.JFrame {
     private boolean conectado = false;
     private String apodo;
     private boolean aplicarConfiabilidad = false;
-    private Multicast multicastThread;
-    private PrivadosUnicast listenerPrivados;
+    private LectorMulticast multicastThread;
+    private LectorUnicast listenerUnicast;
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButtonConectar;
     private javax.swing.JButton jButtonDesconectar;
