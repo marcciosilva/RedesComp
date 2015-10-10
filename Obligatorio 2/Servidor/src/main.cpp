@@ -46,7 +46,7 @@ int sockUnicast;
 struct sockaddr_in servUnicAddr, unic_cliaddr;
 
 void rdt_send_unicast(char* msj, const sockaddr_in& cli_addr) {
-	cout << "rdt_send_unicast message: " << msj << " to: " << inet_ntoa(cli_addr.sin_addr) << endl;
+	cout << "rdt_send_unicast message: " << msj << " to: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << endl;
 	sendto(sockUnicast, msj, strlen(msj), 0, (struct sockaddr *) &cli_addr, sizeof (cli_addr));
 	delete [] msj;
 }
@@ -105,6 +105,14 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 			nuevo_cliente.address = cli_addr;
 			nuevo_cliente.last_seen = time(NULL);
 			lista_clientes.push_back(nuevo_cliente);
+
+			// Envío aviso por multicast
+			string aviso = "> " + string(nick) + " está ahora en línea";
+			char *aviso_ptr = new char[aviso.length() + 1];
+			*aviso_ptr = 0;
+			strcpy(aviso_ptr, aviso.c_str());
+			thread t2(rdt_send_multicast, aviso_ptr);
+			t2.detach();
 		}
 
 	} else if (strcmp(comando, "LOGOUT") == 0) {
@@ -117,15 +125,26 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		t1.detach();
 
 		// Quitar al cliente de la lista
+		char * remitente;
 		bool encontre = false;
 		vector<cliente>::iterator it = lista_clientes.begin();
 		while (not encontre && it != lista_clientes.end()) {
 			if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
+				remitente = it->nick;
 				lista_clientes.erase(it);
 				encontre = true;
 			}
 			it++;
 		}
+
+		// Envío aviso por multicast
+		string aviso = "El usuario ";
+		aviso += string(remitente) + " se ha desconectado.";
+		char *aviso_ptr = new char[aviso.length() + 1];
+		*aviso_ptr = 0;
+		strcpy(aviso_ptr, aviso.c_str());
+		thread t2(rdt_send_multicast, aviso_ptr);
+		t2.detach();
 
 	} else if (strcmp(comando, "GET_CONNECTED") == 0) {
 		// Enviar los nombres de los clientes conectados
