@@ -36,7 +36,9 @@ public class Interfaz extends javax.swing.JFrame {
         initComponents();
         // Botón 'Enviar' como predeterminado al apretar 'Enter'
         getRootPane().setDefaultButton(jButtonEnviar);
-
+        buttonGroup1.setSelected(buttonPublico.getModel(), true);
+        textFieldDestinatario.setVisible(false);
+        labelDestinatario.setVisible(false);
     }
 
     private boolean okIP(String ip) {
@@ -80,6 +82,8 @@ public class Interfaz extends javax.swing.JFrame {
             socketMulticast.close();
 
             // Deshabilito
+            textFieldDestinatario.setText("Ingrese el destinatario aquí");
+            textFieldDestinatario.setEnabled(false);
             jButtonDesconectar.setEnabled(false);
             jTextFieldMensaje.setEnabled(false);
             jTextFieldMensaje.setText("Ingrese su mensaje");
@@ -127,6 +131,7 @@ public class Interfaz extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
+        buttonGroup1 = new javax.swing.ButtonGroup();
         jLabelHostIP = new javax.swing.JLabel();
         jLabelPort = new javax.swing.JLabel();
         jLabelApodo = new javax.swing.JLabel();
@@ -141,6 +146,11 @@ public class Interfaz extends javax.swing.JFrame {
         jTextFieldMensaje = new javax.swing.JTextField();
         jButtonEnviar = new javax.swing.JButton();
         jButtonListarConectados = new javax.swing.JButton();
+        buttonPrivado = new javax.swing.JRadioButton();
+        buttonPublico = new javax.swing.JRadioButton();
+        labelTipoMensaje = new javax.swing.JLabel();
+        textFieldDestinatario = new javax.swing.JTextField();
+        labelDestinatario = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Cliente de Chat - Redes 2015");
@@ -205,7 +215,7 @@ public class Interfaz extends javax.swing.JFrame {
 
         jTextFieldMensaje.setText("Ingrese su mensaje aquí");
         jTextFieldMensaje.setEnabled(false);
-        getContentPane().add(jTextFieldMensaje, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 400, 350, -1));
+        getContentPane().add(jTextFieldMensaje, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 380, 400, 60));
 
         jButtonEnviar.setText("Enviar");
         jButtonEnviar.setEnabled(false);
@@ -214,7 +224,7 @@ public class Interfaz extends javax.swing.JFrame {
                 jButtonEnviarActionPerformed(evt);
             }
         });
-        getContentPane().add(jButtonEnviar, new org.netbeans.lib.awtextra.AbsoluteConstraints(480, 400, -1, -1));
+        getContentPane().add(jButtonEnviar, new org.netbeans.lib.awtextra.AbsoluteConstraints(510, 410, -1, -1));
 
         jButtonListarConectados.setText("Listar usuarios conectados");
         jButtonListarConectados.setEnabled(false);
@@ -224,6 +234,39 @@ public class Interfaz extends javax.swing.JFrame {
             }
         });
         getContentPane().add(jButtonListarConectados, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 180, 190, -1));
+
+        buttonGroup1.add(buttonPrivado);
+        buttonPrivado.setText("Privado");
+        buttonPrivado.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                buttonPrivadoStateChanged(evt);
+            }
+        });
+        buttonPrivado.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                buttonPrivadoActionPerformed(evt);
+            }
+        });
+        getContentPane().add(buttonPrivado, new org.netbeans.lib.awtextra.AbsoluteConstraints(500, 360, -1, -1));
+
+        buttonGroup1.add(buttonPublico);
+        buttonPublico.setText("Público");
+        buttonPublico.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                buttonPublicoActionPerformed(evt);
+            }
+        });
+        getContentPane().add(buttonPublico, new org.netbeans.lib.awtextra.AbsoluteConstraints(500, 380, -1, -1));
+
+        labelTipoMensaje.setText("Tipo de mensaje");
+        getContentPane().add(labelTipoMensaje, new org.netbeans.lib.awtextra.AbsoluteConstraints(490, 340, -1, -1));
+
+        textFieldDestinatario.setText("Ingrese el destinatario aquí");
+        textFieldDestinatario.setEnabled(false);
+        getContentPane().add(textFieldDestinatario, new org.netbeans.lib.awtextra.AbsoluteConstraints(160, 340, 290, -1));
+
+        labelDestinatario.setText("Destinatario:");
+        getContentPane().add(labelDestinatario, new org.netbeans.lib.awtextra.AbsoluteConstraints(70, 340, -1, -1));
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -255,6 +298,8 @@ public class Interfaz extends javax.swing.JFrame {
 
             // Habilito
             jButtonDesconectar.setEnabled(true);
+            textFieldDestinatario.setText(null);
+            textFieldDestinatario.setEnabled(true);
             jTextFieldMensaje.setText(null);
             jTextFieldMensaje.setEnabled(true);
             jButtonEnviar.setEnabled(true);
@@ -347,12 +392,28 @@ public class Interfaz extends javax.swing.JFrame {
         String contenidoMsj = jTextFieldMensaje.getText();
         // Me fijo si ingresó texto
         if (!contenidoMsj.isEmpty()) {
-            String msj = "MESSAGE ";
-            msj = msj.concat(contenidoMsj);
-            msj = msj.concat("\0");
-            (new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
+            if (buttonPrivado.isSelected()) {
+                String destinatario = textFieldDestinatario.getText();
+                if (!destinatario.equals("")) {
+                    String msj = "PRIVATE_MESSAGE ";
+                    msj = msj.concat(destinatario + " ");
+                    msj = msj.concat(contenidoMsj);
+                    msj = msj.concat("\0");
+                    (new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Debe ingresar un nombre de destinatario", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                String msj = "MESSAGE ";
+                msj = msj.concat(contenidoMsj);
+                msj = msj.concat("\0");
+                (new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
+            }
+        } else {
+            JOptionPane.showMessageDialog(this, "Debe escribir un mensaje antes de tocar Enviar", "Error", JOptionPane.ERROR_MESSAGE);
         }
-        // Limpio la línea de chatMsj
+        // Limpio la línea de chatMsj pero no la de destinatario, por si se
+        //quiere seguir la comunicación privada
         jTextFieldMensaje.setText(null);
     }//GEN-LAST:event_jButtonEnviarActionPerformed
 
@@ -376,6 +437,19 @@ public class Interfaz extends javax.swing.JFrame {
         }
         this.dispose();
     }//GEN-LAST:event_cerrandoVentanaEvent
+
+    private void buttonPrivadoStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_buttonPrivadoStateChanged
+    }//GEN-LAST:event_buttonPrivadoStateChanged
+
+    private void buttonPrivadoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonPrivadoActionPerformed
+        textFieldDestinatario.setVisible(true);
+        labelDestinatario.setVisible(false);
+    }//GEN-LAST:event_buttonPrivadoActionPerformed
+
+    private void buttonPublicoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonPublicoActionPerformed
+        textFieldDestinatario.setVisible(false);
+        labelDestinatario.setVisible(false);
+    }//GEN-LAST:event_buttonPublicoActionPerformed
 
     /**
      * Devuelve el apodo del cliente, determinado en la interfaz
@@ -403,6 +477,9 @@ public class Interfaz extends javax.swing.JFrame {
     private LectorMulticast multicastThread;
     private LectorUnicast listenerUnicast;
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.ButtonGroup buttonGroup1;
+    private javax.swing.JRadioButton buttonPrivado;
+    private javax.swing.JRadioButton buttonPublico;
     private javax.swing.JButton jButtonConectar;
     private javax.swing.JButton jButtonDesconectar;
     private javax.swing.JButton jButtonEnviar;
@@ -417,5 +494,8 @@ public class Interfaz extends javax.swing.JFrame {
     private javax.swing.JTextField jTextFieldHostIP;
     private javax.swing.JTextField jTextFieldMensaje;
     private javax.swing.JTextField jTextFieldPort;
+    private javax.swing.JLabel labelDestinatario;
+    private javax.swing.JLabel labelTipoMensaje;
+    private javax.swing.JTextField textFieldDestinatario;
     // End of variables declaration//GEN-END:variables
 }
