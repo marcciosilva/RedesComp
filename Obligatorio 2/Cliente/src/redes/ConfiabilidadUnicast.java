@@ -9,9 +9,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.util.LinkedList;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.logging.Level;
@@ -24,44 +22,14 @@ import java.util.logging.Logger;
  */
 public class ConfiabilidadUnicast extends Thread {
 
-//    DatagramSocket socketUnicast;
     Cliente cliente = Cliente.getInstance();
     InetAddress serverIP;
     int serverPort;
     boolean confiabilidad;
-    private final static int TIMEOUT = 2000;
+    private final static int TIMEOUT = 2000; //ms
     public final static int PACKETSIZE = 65536;
-    private byte[] ack = new byte[PACKETSIZE];
-    //private byte[] data = new byte[PACKETSIZE];
-    //private InetAddress serverIP;
-    //private int serverPort;
     protected DatagramSocket socketUnicast;
-    DatagramPacket paqueteRDT;
     DatagramPacket sndpkt;
-    Queue<DatagramPacket> buffer = new LinkedList<>();
-    DatagramPacket in_pck;
-
-    TimerTask timerTask0;
-    //running timer task as daemon thread
-    Timer timer0;
-
-    //Emisor
-    private enum EstadoSender {
-
-        ESPERO_DATA_0, ESPERO_ACK_0, ESPERO_DATA_1, ESPERO_ACK_1
-    }
-    private EstadoSender estadoS = EstadoSender.ESPERO_DATA_0;
-    int pasoSender = 0;
-    boolean timeout0Sender = false;
-    boolean timeout1Sender = false;
-
-    //Receptor
-    private enum EstadoReceiver {
-
-        ESPERO_DATA_0, ESPERO_DATA_1
-    }
-    private EstadoReceiver estadoR = EstadoReceiver.ESPERO_DATA_0;
-    int pasoReceiver = 0;
 
     /**
      * Envía un mensaje (String) aplicando confiabilidad
@@ -73,9 +41,7 @@ public class ConfiabilidadUnicast extends Thread {
             byte[] data = msj.getBytes();
             DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
             try {
-//                synchronized (socketUnicast) {
                 socketUnicast.send(paquete);
-//                }
             } catch (IOException ex) {
                 Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
                 System.err.println(ex.toString());
@@ -91,10 +57,10 @@ public class ConfiabilidadUnicast extends Thread {
                     DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
                     bufferEmisor.put(nextSeqNum, makeDatapkt(false, nextSeqNum, paquete));
                     socketUnicast.send((DatagramPacket) bufferEmisor.get(nextSeqNum));
-                    if (base == nextSeqNum) { //si es el primer paquete de la ventana
+                    if (base == nextSeqNum) {
+                        //si es el primer paquete de la ventana
                         //seteo un timer para que tras 3 segundos ejecute el
                         //reenvio de todos los paquetes de la ventana
-                        int seconds = 3; //segundos que espera el timer
                         cliente.timerEmisor = new Timer(true);
                         cliente.timerEmisor.scheduleAtFixedRate(
                                 new TimerTask() {
@@ -108,7 +74,7 @@ public class ConfiabilidadUnicast extends Thread {
                                             }
                                         }
                                     }
-                                }, 0, seconds * 1000);
+                                }, 0, TIMEOUT);
                     }
                     cliente.setNextSeqNumEmisor(nextSeqNum + 1);
                 } catch (IOException ex) {
@@ -121,7 +87,7 @@ public class ConfiabilidadUnicast extends Thread {
     }
 
     private void refuse_data(String msj) {
-
+        //FALTA IMPLEMENTAR
     }
 
     /**
@@ -159,7 +125,6 @@ public class ConfiabilidadUnicast extends Thread {
                     //reseteo timer
                     cliente.timerEmisor.cancel();
                     cliente.timerEmisor = new Timer();
-                    int seconds = 3;
                     cliente.timerEmisor.scheduleAtFixedRate(
                             new TimerTask() {
                                 public void run() {
@@ -172,7 +137,7 @@ public class ConfiabilidadUnicast extends Thread {
                                         }
                                     }
                                 }
-                            }, 0, seconds * 1000);
+                            }, 0, TIMEOUT);
                 }
             }
             //reenvío ack anterior si me llega algo fuera de orden
