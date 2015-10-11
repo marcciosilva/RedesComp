@@ -321,7 +321,7 @@ public class Cliente extends javax.swing.JFrame {
 		String strHostIP = jTextFieldHostIP.getText();
 		String strPort = jTextFieldPort.getText();
 		apodo = jTextFieldApodo.getText();
-		
+
 		// Verificar IP
 		serverIP = null;
 		try {
@@ -415,9 +415,23 @@ public class Cliente extends javax.swing.JFrame {
 	 * @param conectados Información de usuarios conectados
 	 */
 	public void comunicarConectados(String conectados) {
-		updateChat(conectados, true, false);
+		String usuarios[] = conectados.split(" ", 2);
+		String aviso = "Usuarios conectados: " + usuarios[1];
+		updateChat(aviso, true, false);
 	}
 
+	public void comunicarMensaje(String msj) {
+		String remitente_y_mensaje[] = msj.split(" ", 2)[1].split(" ", 2);
+		String aviso = remitente_y_mensaje[0] + " dice: " + remitente_y_mensaje[1];
+		updateChat(aviso, true, false);
+	}
+
+	public void comunicarMensajePrivado(String msj) {
+		String remitente_y_mensaje[] = msj.split(" ", 2)[1].split(" ", 2);
+		String aviso = "Mensaje privado de " + remitente_y_mensaje[0] + ": " + remitente_y_mensaje[1];
+		updateChat(aviso, true, false);
+	}
+	
     private void cerrandoVentanaEvent(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_cerrandoVentanaEvent
 		if (conectado) {
 			terminarConexion();

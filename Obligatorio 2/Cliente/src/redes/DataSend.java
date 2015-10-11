@@ -37,9 +37,12 @@ public class DataSend extends Thread {
             instance.comunicarConectados(msj);
         } else if (msj.equals("ALIVE")) {
             //ignorar
-        } else {
+        } else if (msj.contains("RELAYED_MESSAGE")){
             //si es multicast
-            Cliente.getInstance().updateChat(msj, true, false);
+            instance.comunicarMensaje(msj);
+        } else if (msj.contains("PRIVATE_MESSAGE")){
+            //si es mp
+            instance.comunicarMensajePrivado(msj);
         }
     }
 

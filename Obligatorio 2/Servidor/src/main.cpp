@@ -16,6 +16,7 @@
 #include <pthread.h>
 #include <thread>
 #include <mutex>
+#include <cmath>
 
 using namespace std;
 
@@ -50,7 +51,7 @@ int cantClientes = 0;
 int cantMensajes = 0;
 int cantConexiones = 0;
 std::chrono::duration<double> wallTime;
-auto actual = std::chrono::system_clock::now();
+chrono::system_clock::time_point actual;
 
 void rdt_send_unicast(char* msj, const sockaddr_in& cli_addr) {
 	//cout << "rdt_send_unicast message: " << msj << " to: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << endl;
@@ -66,7 +67,7 @@ void rdt_send_multicast(char* msj) {
 
 void deliver_message(char* msj, const sockaddr_in cli_addr) {
 	lock_guard<mutex> lock(lista_clientes_mutex); // el lock se libera automáticamente al finalizar el bloque
-	
+
 	// Imprime en salida standar cada vez que se recibe un mensaje como pide la letra
 	cout << "Mensaje recibido desde: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << endl;
 	cout << "> " << msj << endl;
@@ -176,6 +177,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 
 		// Creo el cabezal
 		string resp = "RELAYED_MESSAGE ";
+		
 		// Busco el nickname del cliente
 		bool encontre = false;
 		vector<cliente>::iterator it = lista_clientes.begin();
@@ -189,18 +191,14 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 
 		char * resp_ptr = new char[MAX_MESSAGE_LENGHT];
 		*resp_ptr = 0;
-		char * resp_ptr2 = new char[MAX_MESSAGE_LENGHT];
-		*resp_ptr2 = 0;
 
 		strcpy(resp_ptr, resp.c_str());
-		strcpy(resp_ptr2, resp.c_str());
 
 		// Obtengo el texto del mensaje
 		char * mensaje = strchr(msj, '\0') + 1;
 
 		// concateno ambos
 		strcat(resp_ptr, mensaje);
-		strcat(resp_ptr2, mensaje);
 
 		// Envío
 		thread t1(rdt_send_multicast, resp_ptr);
@@ -212,6 +210,10 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		//		cliente_over_hamachi.sin_family = PF_INET;
 		//		cliente_over_hamachi.sin_addr.s_addr = inet_addr("25.0.32.206");
 		//		cliente_over_hamachi.sin_port = htons(6789);
+		//		char * resp_ptr2 = new char[MAX_MESSAGE_LENGHT];
+		//		*resp_ptr2 = 0;
+		//		strcpy(resp_ptr2, resp.c_str());
+		//		strcat(resp_ptr2, mensaje);
 		//		thread t2(rdt_send_unicast, resp_ptr2, cliente_over_hamachi);
 		//		t2.detach();
 
@@ -303,7 +305,7 @@ void unicastSocket_setUp() {
 	servUnicAddr.sin_family = AF_INET;
 	servUnicAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	servUnicAddr.sin_port = htons(54321);
-	cout << "Servidor escuchando en unicast, puerto 54321" << endl;
+	cout << "Servidor escuchando unicast en " << inet_ntoa(servUnicAddr.sin_addr) << ":" << ntohs(servUnicAddr.sin_port) << endl;
 	bind(sockUnicast, (struct sockaddr *) &servUnicAddr, sizeof (servUnicAddr));
 }
 
@@ -333,6 +335,7 @@ void multicastSocket_setUp() {
 	servMulticAddr.sin_port = htons(multicastPort);
 }
 
+// Testing solamente
 void crear_cliente() {
 	cliente c;
 	c.last_seen = time(NULL);
@@ -387,7 +390,7 @@ void leer_entrada() {
 				break;
 			case 'f':
 				wallTime = (chrono::system_clock::now() - actual);
-				cout << "wallTime: " << wallTime.count() << " segundos" << endl;
+				cout << "Up time: " << floor(wallTime.count()) << " segundos" << endl;
 				break;
 			default:;
 		}
@@ -395,11 +398,12 @@ void leer_entrada() {
 }
 
 int main(int argc, char** argv) {
+	// Creo y configuro los sockets
 	unicastSocket_setUp();
 	multicastSocket_setUp();
 
-	//inicio el clock para wallTime
-	auto actual = chrono::system_clock::now();
+	// Inicio el clock para wallTime
+	actual = chrono::system_clock::now();
 
 	//crear_cliente();
 
@@ -407,13 +411,12 @@ int main(int argc, char** argv) {
 	thread t1(ping_clientes);
 	t1.detach();
 
-	//thread que lee del teclado
+	// Thread que lee desde cin
 	thread t2(leer_entrada);
 	t2.detach();
 
-	// El método que está en loop escuchando
+	// Loop escuchando en unicast
 	rdt_rcv_unicast();
 
 	return 0;
 }
-
