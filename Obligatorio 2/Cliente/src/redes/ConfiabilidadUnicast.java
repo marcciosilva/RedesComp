@@ -9,8 +9,8 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -25,6 +25,7 @@ import java.util.logging.Logger;
 public class ConfiabilidadUnicast extends Thread {
 
 //    DatagramSocket socketUnicast;
+    Cliente cliente = Cliente.getInstance();
     InetAddress serverIP;
     int serverPort;
     boolean confiabilidad;
@@ -80,92 +81,47 @@ public class ConfiabilidadUnicast extends Thread {
                 System.err.println(ex.toString());
             }
         } else {
-            byte[] data = msj.getBytes();
-            DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
-            // hay que ver que se hace si me llega un mensaje privado mientras
-            // estoy aca -lo guardo en un buffer?
-            // y en el rdt_recieve antes de hacer nada que se fije si tiene cosas en ese buffer?
-            try {
-                boolean salir = false;
-                while (!salir) {
-
-                    if (estadoS == EstadoSender.ESPERO_DATA_0) {
-                        // creo paquete para enviar a partir del string con numero de secuencia 0
-                        paqueteRDT = makeDatapkt(false, 0, paquete);
-                        socketUnicast.send(paquete);
-                        socketUnicast.setSoTimeout(TIMEOUT);
-                        estadoS = EstadoSender.ESPERO_ACK_0;
-                    } else if (estadoS == EstadoSender.ESPERO_ACK_0) {
-                        in_pck = new DatagramPacket(ack, ack.length);
-                        try {
-                            socketUnicast.receive(in_pck);
-                        } catch (java.net.SocketTimeoutException ex) {
-                            Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-                            System.out.println("TIMEOUT DE 0");
-                            timeout0Sender = true;
-                        }
-
-                        if (timeout0Sender) {
-                            // reenvio el paquete
-                            socketUnicast.send(paquete);
-                            //start timer de 0
-                            socketUnicast.setSoTimeout(TIMEOUT);
-                            timeout0Sender = false;
-
-                        } else if (is_ACK(in_pck) && (has_seq0(in_pck))) {
-                            System.out.println("ack");
-                            // stop timer de 0
-                            socketUnicast.setSoTimeout(0);
-                            estadoS = EstadoSender.ESPERO_DATA_1;
-                            salir = true;
-                            pasoSender = 1;
-
-                        } else if (is_not_ACK(in_pck)) { //me llego un mensaje privado del servidor, lo mando al buche
-                            System.out.println("noack");
-                            buffer.add(in_pck);
-                        }
-
-                    } else if (estadoS == EstadoSender.ESPERO_DATA_1) {
-                        // creo paquete para enviar a partir del string con numero de secuencia 1
-                        //paquete = makeDatapkt(false, 1, data, serverIP, serverPort);
-                        socketUnicast.send(paquete);
-                        //start timer de 1
-                        socketUnicast.setSoTimeout(TIMEOUT);
-                        estadoS = EstadoSender.ESPERO_ACK_1;
-
-                    } else if (estadoS == EstadoSender.ESPERO_ACK_1) {
-                        DatagramPacket in_pck = new DatagramPacket(ack, ack.length);
-                        try {
-                            socketUnicast.receive(in_pck);
-                        } catch (java.net.SocketTimeoutException ex) {
-                            Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-                            System.out.println("TIMEOUT DE 1");
-                            timeout1Sender = true;
-                        }
-                        if (timeout1Sender) {
-                            // reenvio el paquete
-                            socketUnicast.send(paquete);
-                            //start timer de 1
-                            socketUnicast.setSoTimeout(TIMEOUT);
-                            timeout1Sender = false;
-
-                        } else if (is_ACK(in_pck) && (has_seq1(in_pck))) {
-                            // stop timer de 1
-                            estadoS = EstadoSender.ESPERO_DATA_1;
-                            salir = true;
-                            pasoSender = 0;
-
-                        } else if (is_not_ACK(in_pck)) { //me llego un mensaje privado del servidor, lo mando al buche
-                            buffer.add(in_pck);
-                        }
+            int nextSeqNum = cliente.getNextSeqNumEmisor();
+            int windowSize = cliente.getMaxSeqNum();
+            int base = cliente.getBaseEmisor();
+            Map<Integer, DatagramPacket> bufferEmisor = cliente.bufferEmisor;
+            if (nextSeqNum < base + windowSize) {
+                try {
+                    byte[] data = msj.getBytes();
+                    DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
+                    bufferEmisor.put(nextSeqNum, makeDatapkt(false, nextSeqNum, paquete));
+                    socketUnicast.send((DatagramPacket) bufferEmisor.get(nextSeqNum));
+                    if (base == nextSeqNum) { //si es el primer paquete de la ventana
+                        //seteo un timer para que tras 3 segundos ejecute el
+                        //reenvio de todos los paquetes de la ventana
+                        int seconds = 3; //segundos que espera el timer
+                        cliente.timerEmisor = new Timer(true);
+                        cliente.timerEmisor.scheduleAtFixedRate(
+                                new TimerTask() {
+                                    public void run() {
+                                        for (DatagramPacket paquete : bufferEmisor.values()) {
+                                            try {
+                                                //reenvio paquetes
+                                                socketUnicast.send(paquete);
+                                            } catch (IOException ex) {
+                                                Logger.getLogger(EnvioUnicast_Timeout.class.getName()).log(Level.SEVERE, null, ex);
+                                            }
+                                        }
+                                    }
+                                }, 0, seconds * 1000);
                     }
+                    cliente.setNextSeqNumEmisor(nextSeqNum + 1);
+                } catch (IOException ex) {
+                    Logger.getLogger(ConfiabilidadUnicast.class.getName()).log(Level.SEVERE, null, ex);
                 }
-
-            } catch (IOException ex) {
-                Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+            } else {
+                refuse_data(msj); //FALTA IMPLEMENTAR
             }
-
         }
+    }
+
+    private void refuse_data(String msj) {
+
     }
 
     /**
@@ -174,87 +130,54 @@ public class ConfiabilidadUnicast extends Thread {
      *
      * @throws IOException
      */
-    public void rdt_rcv() throws IOException {
+    public void rdt_rcv(DatagramPacket rcvpkt) throws IOException {
         if (!confiabilidad) {
-            byte[] data = new byte[PACKETSIZE];
-            DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
-            // Espero por una respuesta con timeout de 2 segundos
-//                socketUnicast.setSoTimeout(2000);
-            socketUnicast.receive(paquete);
-            // Convierto el byte [] de la respuesta en un String y se lo paso
-            // a DataSend para que vea que hacer con él
-            String msj = new String(paquete.getData()).split("\0")[0];
+            String msj = new String(rcvpkt.getData()).split("\0")[0];
             (new DataSend(msj)).start();
         } else {
-            //TODO
-            byte[] bufferPaquete = new byte[PACKETSIZE];
-            DatagramPacket rcvpkt = new DatagramPacket(bufferPaquete,
-                    bufferPaquete.length, serverIP, serverPort);
-            boolean salir = false;
-            String strMensaje = null;
-            while (!salir) {
-                try {
-                    if (buffer.isEmpty()) { //no tengo ningun mensaje privado guardado sin procesar
-                        socketUnicast.receive(rcvpkt);
-                    } else {
-                        rcvpkt = buffer.remove();
-                    }
-                    byte[] bytes = rcvpkt.getData();
-                    //extraigo el header para manipularlo bitwise
-                    byte header = bytes[0];
-                    //extraigo la data y creo un string a partir de ella
-                    byte[] data = Arrays.copyOfRange(bytes, 1, bytes.length - 1);
-                    strMensaje = new String(data, 0, data.length);
-                    if (estadoR == EstadoReceiver.ESPERO_DATA_0) {
-                        if (is_not_ACK(rcvpkt) && has_seq1(rcvpkt)) {
-                            sndpkt = makepkt(true, 1);
-                            socketUnicast.send(sndpkt);
-                        } else if (is_not_ACK(rcvpkt) && has_seq0(rcvpkt)) {
-                            //me llega lo que estoy esperando del servidor
-                            sndpkt = makepkt(true, 0);
-                            //broadcasteo el acknowledge
-                            //si le llega a otro usuario, simplemente lo ignora
-                            socketUnicast.send(sndpkt);
-                            pasoReceiver = 1;
-                            salir = true;
-                            estadoR = EstadoReceiver.ESPERO_DATA_1;
-                        }
-                    } else if (estadoR == EstadoReceiver.ESPERO_DATA_1) {
-                        if (buffer.contains(rcvpkt)) {
-                            pasoReceiver = 0;
-                            salir = true;
-                            estadoR = EstadoReceiver.ESPERO_DATA_0;
-
-                        } else if (is_not_ACK(rcvpkt) && has_seq0(rcvpkt)) {
-                            sndpkt = makepkt(true, 0);
-                            socketUnicast.send(sndpkt);
-                        } else if (is_not_ACK(rcvpkt) && has_seq1(rcvpkt)) {
-                            //me llega lo que estoy esperando del servidor
-                            sndpkt = makepkt(true, 0);
-                            //broadcasteo el acknowledge
-                            //si le llega a otro usuario, simplemente lo ignora
-                            socketUnicast.send(sndpkt);
-                            pasoReceiver = 1;
-                            salir = true;
-                            estadoR = EstadoReceiver.ESPERO_DATA_0;
-                        }
-                    }
-                } catch (IOException ex) {
-                    Logger.getLogger(LectorMulticast.class.getName()).log(Level.SEVERE, null, ex);
+            int expectedSeqNumReceptor
+                    = cliente.getExpectedSeqNumReceptor();
+            if (hasSeqNum(rcvpkt, expectedSeqNumReceptor)) {
+                sndpkt = makepkt(true, expectedSeqNumReceptor);
+                cliente.setExpectedSeqNumReceptor(
+                        expectedSeqNumReceptor
+                        % cliente.getMaxSeqNum());
+                String msj = new String(rcvpkt.getData()).split("\0")[0];
+                (new DataSend(msj)).start();
+            }
+            //si el paquete es ack (independientemente de si tiene el numSeq
+            //esperado o no), se actualiza el puntero base
+            //de la ventana de emisión de acuerdo a su numero de seq
+            //y si la base ahora coincide con nextSeqNum,
+            //se detiene el timer porque no hay nada que mandar,
+            //en caso contrario se reinicia
+            if (is_ACK(rcvpkt)) {
+                cliente.setBaseEmisor(getSeqNum(rcvpkt) + 1);
+                if (cliente.getBaseEmisor() == cliente.getNextSeqNumEmisor()) {
+                    cliente.timerEmisor.cancel();
+                } else {
+                    //reseteo timer
+                    cliente.timerEmisor.cancel();
+                    cliente.timerEmisor = new Timer();
+                    int seconds = 3;
+                    cliente.timerEmisor.scheduleAtFixedRate(
+                            new TimerTask() {
+                                public void run() {
+                                    for (DatagramPacket paquete : cliente.bufferEmisor.values()) {
+                                        try {
+                                            //reenvio paquetes
+                                            socketUnicast.send(paquete);
+                                        } catch (IOException ex) {
+                                            Logger.getLogger(EnvioUnicast_Timeout.class.getName()).log(Level.SEVERE, null, ex);
+                                        }
+                                    }
+                                }
+                            }, 0, seconds * 1000);
                 }
             }
-            (new DataSend(strMensaje)).start();
-            //paso mensaje a capa de aplicación
+            //reenvío ack anterior si me llega algo fuera de orden
+            socketUnicast.send(sndpkt);
         }
-    }
-
-    private boolean is_not_ACK(DatagramPacket rcvpkt) {
-        //devuelve true si el paquete no es un acknowledge
-        byte[] bytes = rcvpkt.getData();
-        byte header = bytes[0];
-        int isAck = (int) header & 0x80; //mask 10000000
-        //devuelvo true si el bit estaba apagado
-        return isAck == 0;
     }
 
     private boolean is_ACK(DatagramPacket rcvpkt) {
@@ -266,20 +189,19 @@ public class ConfiabilidadUnicast extends Thread {
         return isAck == 1;
     }
 
-    private boolean has_seq1(DatagramPacket rcvpkt) {
+    private int getSeqNum(DatagramPacket rcvpkt) {
+        byte[] bytes = rcvpkt.getData();
+        byte header = bytes[0];
+        int seqNum = (int) header & 0x7f;
+        return seqNum;
+    }
+
+    private boolean hasSeqNum(DatagramPacket rcvpkt, int expectedSeqNum) {
         //devuelve true si el numero de secuencia del paquete coincide con 1
         byte[] bytes = rcvpkt.getData();
         byte header = bytes[0];
         int seqNum = (int) header & 0x7f;
-        return seqNum == 1;
-    }
-
-    private boolean has_seq0(DatagramPacket rcvpkt) {
-        //devuelve true si el numero de secuencia del paquete coincide con 0
-        byte[] bytes = rcvpkt.getData();
-        byte header = bytes[0];
-        int seqNum = (int) header & 0x7f;
-        return seqNum == 0;
+        return seqNum == expectedSeqNum;
     }
 
     private DatagramPacket makeDatapkt(boolean is_ACK, int seqNum, DatagramPacket paquete) {

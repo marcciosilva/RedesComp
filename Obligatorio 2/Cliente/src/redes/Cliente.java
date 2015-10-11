@@ -3,11 +3,15 @@ package redes;
 import java.awt.Color;
 import java.awt.Font;
 import java.io.IOException;
+import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Timer;
 import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -473,15 +477,55 @@ public class Cliente extends javax.swing.JFrame {
         v.setVisible(true);
     }
 
-    //estructuras de sender
-    public int seqNum = 1;
-    public int base = 1;
+    public int getExpectedSeqNumReceptor() {
+        return expectedSeqNumReceptor;
+    }
 
-    public Vector<String> bufferReceptor = new Vector<String>(0); //de tamaño 0
+    public void setExpectedSeqNumReceptor(int num) {
+        expectedSeqNumReceptor = num;
+    }
+
+    public int getMaxSeqNum() {
+        return maxSeqNum;
+    }
+
+    public void setMaxSeqNum(int num) {
+        maxSeqNum = num;
+    }
+
+    public int getNextSeqNumEmisor() {
+        return nextSeqNumEmisor;
+    }
+
+    public void setNextSeqNumEmisor(int num) {
+        nextSeqNumEmisor = num;
+    }
+
+    public int getBaseEmisor() {
+        return baseEmisor;
+    }
+
+    public void setBaseEmisor(int num) {
+        baseEmisor = num;
+    }
+
+    public void agregarMensajeBufferEmision() {
+    }
 
     //estructuras de receiver
-    public Vector<String> bufferEmisor = new Vector<String>(0); //de tamaño 0
-
+    //numero de secuencia asociado a mensaje
+    //el numero será módulo tamañoVentanaEmisión
+    public int maxSeqNum = 20;
+    public int expectedSeqNumReceptor = 0;
+//    public Map<Integer, String> bufferReceptor = new HashMap<>();
+    //estructuras de sender
+    public int nextSeqNumEmisor = 1;
+    public int baseEmisor = 1;
+    public Map<Integer, DatagramPacket> bufferEmisor = new HashMap<>();
+    Timer timerEmisor;
+    //    timer  = new Timer();
+    //    timer.schedule (
+    //    new RemindTask(), seconds*1000);
     // No cambiar! Debe ser el mismo en el servidor.
     private int multicastPort = 6789;
     private InetAddress multicastIP;
