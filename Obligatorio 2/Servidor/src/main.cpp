@@ -273,7 +273,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 			cantMensajes++;
 
 		} else { //el destinatario no está conectado
-			string resp = "El usuario " + string(destinatario) + " no se encuentra en línea.";
+			string resp = "MP_FAILED El usuario " + string(destinatario) + " no se encuentra en línea.";
 			char *resp_ptr = new char[resp.length() + 1];
 			*resp_ptr = 0;
 			strcpy(resp_ptr, resp.c_str());

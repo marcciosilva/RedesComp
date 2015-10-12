@@ -43,6 +43,9 @@ public class DataSend extends Thread {
         } else if (msj.contains("PRIVATE_MESSAGE")){
             //si es mp
             instance.comunicarMensajePrivado(msj);
+        } else if (msj.contains("MP_FAILED")){
+            //si es mp
+            instance.comunicarMensajePrivadoFailed(msj);
         }
     }
 

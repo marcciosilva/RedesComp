@@ -437,6 +437,11 @@ public class Cliente extends javax.swing.JFrame {
         String aviso = "Mensaje privado de " + remitente_y_mensaje[0] + ": " + remitente_y_mensaje[1];
         updateChat(aviso, true, false);
     }
+	
+	void comunicarMensajePrivadoFailed(String msj) {
+		String mensaje[] = msj.split(" ", 2);
+		updateChat(mensaje[1], true, false);
+	}
 
     private void cerrandoVentanaEvent(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_cerrandoVentanaEvent
         if (conectado) {
