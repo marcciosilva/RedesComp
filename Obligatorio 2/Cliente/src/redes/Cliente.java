@@ -12,7 +12,6 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
-import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
@@ -392,6 +391,7 @@ public class Cliente extends javax.swing.JFrame {
                     msj = msj.concat(destinatario + " ");
                     msj = msj.concat(contenidoMsj);
                     msj = msj.concat("\0");
+                    updateChat(apodo + " > " + destinatario + ": " + contenidoMsj, true, false);
                     (new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
                 } else {
                     JOptionPane.showMessageDialog(this, "Debe ingresar un nombre de destinatario", "Error", JOptionPane.ERROR_MESSAGE);
@@ -428,20 +428,21 @@ public class Cliente extends javax.swing.JFrame {
 
     public void comunicarMensaje(String msj) {
         String remitente_y_mensaje[] = msj.split(" ", 2)[1].split(" ", 2);
-        String aviso = remitente_y_mensaje[0] + " dice: " + remitente_y_mensaje[1];
+        String aviso = remitente_y_mensaje[0] + ": " + remitente_y_mensaje[1];
         updateChat(aviso, true, false);
     }
 
     public void comunicarMensajePrivado(String msj) {
         String remitente_y_mensaje[] = msj.split(" ", 2)[1].split(" ", 2);
-        String aviso = "Mensaje privado de " + remitente_y_mensaje[0] + ": " + remitente_y_mensaje[1];
+//        String aviso = "Mensaje privado de " + remitente_y_mensaje[0] + ": " + remitente_y_mensaje[1];
+        String aviso = remitente_y_mensaje[0] + " > " + apodo + ": " + remitente_y_mensaje[1];
         updateChat(aviso, true, false);
     }
-	
-	void comunicarMensajePrivadoFailed(String msj) {
-		String mensaje[] = msj.split(" ", 2);
-		updateChat(mensaje[1], true, false);
-	}
+
+    void comunicarMensajePrivadoFailed(String msj) {
+        String mensaje[] = msj.split(" ", 2);
+        updateChat(mensaje[1], true, false);
+    }
 
     private void cerrandoVentanaEvent(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_cerrandoVentanaEvent
         if (conectado) {
