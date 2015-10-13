@@ -29,8 +29,6 @@ public class DataSend extends Thread {
                     "Cliente",
                     JOptionPane.INFORMATION_MESSAGE);
             instance.comunicarNoOk();
-            //limpio chat
-            instance.updateChat(null, false, true);
         } else if (msj.equals("GOODBYE")) {
             instance.terminarConexion();
         } else if (msj.contains("CONNECTED")) {
@@ -38,13 +36,10 @@ public class DataSend extends Thread {
         } else if (msj.equals("ALIVE")) {
             instance.comunicarAlive();
         } else if (msj.contains("RELAYED_MESSAGE")) {
-            //si es multicast
             instance.comunicarMensaje(msj);
         } else if (msj.contains("PRIVATE_MESSAGE")) {
-            //si es mp
             instance.comunicarMensajePrivado(msj);
         } else if (msj.contains("MP_FAILED")) {
-            //si es mp
             instance.comunicarMensajePrivadoFailed(msj);
         } else {
             instance.updateChat(msj, true, false);

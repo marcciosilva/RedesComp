@@ -24,7 +24,7 @@ using namespace std;
 #define MAX_NICKNAME_LENGHT 64		// Largo del nickname
 #define MAX_PACKET_SIZE 65507		// Tamaño máximo para el payload de un paquete UDP (65,535 − 8 byte UDP header − 20 byte IP header)
 #define multicastIP "225.5.4.3"		// IP a la que el servidor envía por multicast
-#define multicastPort 6789			// Puerto al que el servidor envía por multicast
+#define multicastPort 6789		// Puerto al que el servidor envía por multicast
 
 struct cliente {
     char nick[MAX_NICKNAME_LENGHT];
@@ -377,27 +377,29 @@ vector<sockaddr_in>* client_addresses() {
 
 void ping_clientes() {
     string alive_str = "ALIVE";
-
-    while (true) {
-        vector<sockaddr_in>* lista_clientes = client_addresses();
-        if (not lista_clientes->empty()) {
-            for (vector<sockaddr_in>::iterator it = lista_clientes->begin(); it != lista_clientes->end(); it++) {
-                char * alive_ptr = new char [alive_str.length() + 1];
-                strcpy(alive_ptr, alive_str.c_str());
-                rdt_send_unicast(alive_ptr, *it);
-            }
+    lock_guard<mutex> lock(lista_clientes_mutex);
+    if (not lista_clientes.empty()) {
+        for (vector<cliente>::iterator it = lista_clientes.begin(); it != lista_clientes.end(); it++) {
+            char * alive_ptr = new char [alive_str.length() + 1];
+            strcpy(alive_ptr, alive_str.c_str());
+            rdt_send_unicast(alive_ptr, it->address);
         }
+    }
+}
+
+void ping_clientes_trigger() {
+    while (true) {
+        ping_clientes();
         usleep(1000000); // 1 sec
     }
 }
 
-void update_clientes_check() {
+void update_clientes() {
     lock_guard<mutex> lock(lista_clientes_mutex);
     time_t now = time(NULL);
     for (vector<cliente>::iterator it = lista_clientes.begin(); it != lista_clientes.end();) {
         //si no lo vi por mas de 5 seg
         if (difftime(now, it->last_seen) > 2) {
-            cout << "Algún cliente no contestó el alive en tiempo";
             // Quitar al cliente de la lista
             char * remitente;
             remitente = it->nick;
@@ -411,7 +413,7 @@ void update_clientes_check() {
             thread t2(rdt_send_multicast, aviso_ptr);
             t2.detach();
             it = lista_clientes.erase(it);
-            
+
             cantClientes--;
         } else {
             it++;
@@ -419,10 +421,10 @@ void update_clientes_check() {
     }
 }
 
-void update_clientes() {
+void update_clientes_trigger() {
     while (true) {
         usleep(3000000);
-        update_clientes_check();
+        update_clientes();
     }
 }
 
@@ -459,7 +461,7 @@ int main(int argc, char** argv) {
     //crear_cliente();
 
     // El thread que hace ping a los clientes
-    thread t1(ping_clientes);
+    thread t1(ping_clientes_trigger);
     t1.detach();
 
     // Thread que lee desde cin
@@ -468,7 +470,7 @@ int main(int argc, char** argv) {
 
     //thread que cada tanto (más tiempo que el intervalo entre ALIVE's)
     //chequea qué clientes están y qué clientes no están
-    thread t3(update_clientes);
+    thread t3(update_clientes_trigger);
     t3.detach();
 
     // Loop escuchando en unicast
