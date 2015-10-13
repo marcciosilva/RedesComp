@@ -36,16 +36,18 @@ public class DataSend extends Thread {
         } else if (msj.contains("CONNECTED")) {
             instance.comunicarConectados(msj);
         } else if (msj.equals("ALIVE")) {
-            //ignorar
-        } else if (msj.contains("RELAYED_MESSAGE")){
+            instance.comunicarAlive();
+        } else if (msj.contains("RELAYED_MESSAGE")) {
             //si es multicast
             instance.comunicarMensaje(msj);
-        } else if (msj.contains("PRIVATE_MESSAGE")){
+        } else if (msj.contains("PRIVATE_MESSAGE")) {
             //si es mp
             instance.comunicarMensajePrivado(msj);
-        } else if (msj.contains("MP_FAILED")){
+        } else if (msj.contains("MP_FAILED")) {
             //si es mp
             instance.comunicarMensajePrivadoFailed(msj);
+        } else {
+            instance.updateChat(msj, true, false);
         }
     }
 

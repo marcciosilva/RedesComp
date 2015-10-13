@@ -432,6 +432,13 @@ public class Cliente extends javax.swing.JFrame {
         updateChat(aviso, true, false);
     }
 
+    public void comunicarAlive() {
+        //hay que enviar un IS_ALIVE al server por unicast
+        String msj = "IS_ALIVE\0";
+        (new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
+
+    }
+
     public void comunicarMensajePrivado(String msj) {
         String remitente_y_mensaje[] = msj.split(" ", 2)[1].split(" ", 2);
 //        String aviso = "Mensaje privado de " + remitente_y_mensaje[0] + ": " + remitente_y_mensaje[1];
