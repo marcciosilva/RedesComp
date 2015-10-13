@@ -396,13 +396,11 @@ void update_clientes_check() {
     time_t now = time(NULL);
     for (vector<cliente>::iterator it = lista_clientes.begin(); it != lista_clientes.end();) {
         //si no lo vi por mas de 5 seg
-        if (difftime(now, it->last_seen) > 5) {
+        if (difftime(now, it->last_seen) > 2) {
             cout << "Algún cliente no contestó el alive en tiempo";
             // Quitar al cliente de la lista
             char * remitente;
             remitente = it->nick;
-            //                lock_guard<mutex> lock(lista_clientes_mutex);
-            it = lista_clientes.erase(it);
 
             // Envío aviso por multicast
             string aviso = "El usuario ";
@@ -412,7 +410,8 @@ void update_clientes_check() {
             strcpy(aviso_ptr, aviso.c_str());
             thread t2(rdt_send_multicast, aviso_ptr);
             t2.detach();
-
+            it = lista_clientes.erase(it);
+            
             cantClientes--;
         } else {
             it++;
