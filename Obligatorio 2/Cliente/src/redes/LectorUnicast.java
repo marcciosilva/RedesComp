@@ -2,19 +2,35 @@ package redes;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import static redes.ConfiabilidadUnicast.PACKETSIZE;
 
 /**
  * Thread que se usa para escuchar mensajes privados
  *
  * @author marccio
  */
-public class LectorUnicast extends ConfiabilidadUnicast {
+public class LectorUnicast extends Thread {
 
     boolean conexionAbierta;
+    DatagramPacket sndpkt;
+    Cliente cliente = Cliente.getInstance();
+    InetAddress serverIP;
+    int serverPort;
+    boolean confiabilidad;
+    public final static int TIMEOUT = 2000;
+    public final static int PACKETSIZE = 65536;
+    protected DatagramSocket socketUnicast;
+    //Receptor
+
+    protected enum EstadoReceiver {
+
+        ESPERO_DATA_0, ESPERO_DATA_1
+    }
+    protected EstadoReceiver estadoReceiver;
 
     /**
      * Construye el thread
@@ -31,6 +47,7 @@ public class LectorUnicast extends ConfiabilidadUnicast {
 
     @Override
     public void run() {
+        estadoReceiver = EstadoReceiver.ESPERO_DATA_0;
         socketUnicast = cliente.getUnicastSocket();
         while (true) {
             try {
@@ -47,4 +64,58 @@ public class LectorUnicast extends ConfiabilidadUnicast {
             }
         }
     }
+
+    /**
+     * Recibe un mensaje aplicando confiabilidad. El mensaje se comunica hacia
+     * la interfaz mediante un thread DataSend.
+     *
+     * @param paquete
+     * @throws IOException
+     */
+    public void rdt_rcv(DatagramPacket paquete) throws IOException {
+        if (!confiabilidad) {
+            String msj = new String(paquete.getData()).split("\0")[0];
+            (new DataSend(msj)).start();
+        } else {
+            if (UtilsConfiabilidad.is_ACK(paquete)) { //acknowledge para mensaje enviado por el sender
+                if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_ACK_0
+                        && UtilsConfiabilidad.has_seq0(paquete)
+                        || cliente.estadoSender == Cliente.EstadoSender.ESPERO_ACK_1
+                        && UtilsConfiabilidad.has_seq1(paquete)) {
+                    cliente.envioFinalizado();
+                }
+            } else {
+                if (estadoReceiver == EstadoReceiver.ESPERO_DATA_0) {
+                    if (UtilsConfiabilidad.has_seq1(paquete)) {
+                        sndpkt = UtilsConfiabilidad.makepkt(true, 1);
+                        socketUnicast.send(sndpkt);
+                    } else if (UtilsConfiabilidad.has_seq0(paquete)) {
+                        byte[] bytes = paquete.getData();
+                        byte[] data = Arrays.copyOfRange(bytes, 1, bytes.length - 1);
+                        String strMensaje = new String(data, 0, data.length);
+                        //paso mensaje a capa de aplicación
+                        (new DataSend(strMensaje)).start();
+                        sndpkt = UtilsConfiabilidad.makepkt(true, 0);
+                        socketUnicast.send(sndpkt);
+                        estadoReceiver = EstadoReceiver.ESPERO_DATA_1;
+                    }
+                } else if (estadoReceiver == EstadoReceiver.ESPERO_DATA_1) {
+                    if (UtilsConfiabilidad.has_seq0(paquete)) {
+                        sndpkt = UtilsConfiabilidad.makepkt(true, 0);
+                        socketUnicast.send(sndpkt);
+                    } else if (UtilsConfiabilidad.has_seq1(paquete)) {
+                        byte[] bytes = paquete.getData();
+                        byte[] data = Arrays.copyOfRange(bytes, 1, bytes.length - 1);
+                        String strMensaje = new String(data, 0, data.length);
+                        //paso mensaje a capa de aplicación
+                        (new DataSend(strMensaje)).start();
+                        sndpkt = UtilsConfiabilidad.makepkt(true, 1);
+                        socketUnicast.send(sndpkt);
+                        estadoReceiver = EstadoReceiver.ESPERO_DATA_0;
+                    }
+                }
+            }
+        }
+    }
+
 }

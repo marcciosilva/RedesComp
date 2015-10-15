@@ -3,15 +3,11 @@ package redes;
 import java.awt.Color;
 import java.awt.Font;
 import java.io.IOException;
-import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Timer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
@@ -356,7 +352,9 @@ public class Cliente extends javax.swing.JFrame {
                 listenerUnicast = new LectorUnicast(aplicarConfiabilidad, serverIP, serverPort);
                 listenerUnicast.start();
                 String msj = "LOGIN " + apodo + "\0";
-                (new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
+                deshabilitarEnvios();
+                threadEnvioUnicastActual = new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort);
+                threadEnvioUnicastActual.start();
             } catch (SocketException ex) {
                 Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -376,7 +374,9 @@ public class Cliente extends javax.swing.JFrame {
 
     private void jButtonDesconectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonDesconectarActionPerformed
         String msj = "LOGOUT\0";
-        (new EnvioUnicast(false, msj, serverIP, serverPort)).start();
+        deshabilitarEnvios();
+        threadEnvioUnicastActual = new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort);
+        threadEnvioUnicastActual.start();
     }//GEN-LAST:event_jButtonDesconectarActionPerformed
 
     private void jButtonEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEnviarActionPerformed
@@ -392,7 +392,9 @@ public class Cliente extends javax.swing.JFrame {
                     msj = msj.concat(contenidoMsj);
                     msj = msj.concat("\0");
                     updateChat(apodo + " > " + destinatario + ": " + contenidoMsj, true, false);
-                    (new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
+                    deshabilitarEnvios();
+                    threadEnvioUnicastActual = new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort);
+                    threadEnvioUnicastActual.start();
                 } else {
                     JOptionPane.showMessageDialog(this, "Debe ingresar un nombre de destinatario", "Error", JOptionPane.ERROR_MESSAGE);
                 }
@@ -400,7 +402,9 @@ public class Cliente extends javax.swing.JFrame {
                 String msj = "MESSAGE ";
                 msj = msj.concat(contenidoMsj);
                 msj = msj.concat("\0");
-                (new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
+                deshabilitarEnvios();
+                threadEnvioUnicastActual = new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort);
+                threadEnvioUnicastActual.start();
             }
         } else {
             JOptionPane.showMessageDialog(this, "Debe escribir un mensaje antes de tocar Enviar", "Error", JOptionPane.ERROR_MESSAGE);
@@ -412,7 +416,9 @@ public class Cliente extends javax.swing.JFrame {
 
     private void jButtonListarConectadosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonListarConectadosActionPerformed
         String msj = "GET_CONNECTED\0";
-        (new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
+        deshabilitarEnvios();
+        threadEnvioUnicastActual = new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort);
+        threadEnvioUnicastActual.start();
     }//GEN-LAST:event_jButtonListarConectadosActionPerformed
 
     /**
@@ -435,7 +441,9 @@ public class Cliente extends javax.swing.JFrame {
     public void comunicarAlive() {
         //hay que enviar un IS_ALIVE al server por unicast
         String msj = "IS_ALIVE\0";
-        (new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort)).start();
+        deshabilitarEnvios();
+        threadEnvioUnicastActual = new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort);
+        threadEnvioUnicastActual.start();
 
     }
 
@@ -490,56 +498,37 @@ public class Cliente extends javax.swing.JFrame {
         v.setVisible(true);
     }
 
-    public int getExpectedSeqNumReceptor() {
-        return expectedSeqNumReceptor;
+    public void envioFinalizado() {
+        //aca tengo que parar el thread de envio, matarlo
+        //eventualmente detiene un timer, etc.
+        if (threadEnvioUnicastActual.isAlive()) {
+            threadEnvioUnicastActual.interrupt();
+            threadEnvioUnicastActual = null;
+        }
+        habilitarEnvios();
     }
 
-    public void setExpectedSeqNumReceptor(int num) {
-        expectedSeqNumReceptor = num;
+    private void deshabilitarEnvios() {
+        jButtonDesconectar.setEnabled(false);
+        jButtonListarConectados.setEnabled(false);
+        jButtonEnviar.setEnabled(false); //deshabilito enviar
     }
 
-    public int getMaxSeqNum() {
-        return maxSeqNum;
+    private void habilitarEnvios() {
+        jButtonDesconectar.setEnabled(true);
+        jButtonListarConectados.setEnabled(true);
+        jButtonEnviar.setEnabled(true); //deshabilito enviar
     }
 
-    public void setMaxSeqNum(int num) {
-        maxSeqNum = num;
-    }
+    EnvioUnicast threadEnvioUnicastActual;
 
-    public int getNextSeqNumEmisor() {
-        return nextSeqNumEmisor;
-    }
+    //Máquina de estados del emisor
+    public static enum EstadoSender {
 
-    public void setNextSeqNumEmisor(int num) {
-        nextSeqNumEmisor = num;
+        ESPERO_DATA_0, ESPERO_ACK_0, ESPERO_DATA_1, ESPERO_ACK_1
     }
+    public EstadoSender estadoSender = EstadoSender.ESPERO_DATA_0;
 
-    public int getBaseEmisor() {
-        return baseEmisor;
-    }
-
-    public void setBaseEmisor(int num) {
-        baseEmisor = num;
-    }
-
-    public void agregarMensajeBufferEmision() {
-    }
-
-    //estructuras de receiver
-    //numero de secuencia asociado a mensaje
-    //el numero será módulo tamañoVentanaEmisión
-    public int maxSeqNum = 20;
-    public int expectedSeqNumReceptor = 0;
-//    public Map<Integer, String> bufferReceptor = new HashMap<>();
-    //estructuras de sender
-    public int nextSeqNumEmisor = 1;
-    public int baseEmisor = 1;
-    public Map<Integer, DatagramPacket> bufferEmisor = new HashMap<>();
-    Timer timerEmisor;
-    //    timer  = new Timer();
-    //    timer.schedule (
-    //    new RemindTask(), seconds*1000);
-    // No cambiar! Debe ser el mismo en el servidor.
     private int multicastPort = 6789;
     private InetAddress multicastIP;
     private String strMulticastIP = "225.5.4.3";
