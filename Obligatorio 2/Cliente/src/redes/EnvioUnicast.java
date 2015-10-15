@@ -18,7 +18,7 @@ public class EnvioUnicast extends Thread {
 
     String msj;
     DatagramPacket out_pck;
-    boolean envioExitoso = false; //marca si tengo que terminar ejecución del thread
+    boolean interrumpido = false; //marca si tengo que terminar ejecución del thread
     Cliente cliente = Cliente.getInstance();
     InetAddress serverIP;
     int serverPort;
@@ -56,8 +56,8 @@ public class EnvioUnicast extends Thread {
     //la única situación en la que se interrumpe al thread es si llegó un ACK
     @Override
     public void interrupt() {
-        super.interrupt(); //To change body of generated methods, choose Tools | Templates.
-        envioExitoso = true;
+        super.interrupt();
+        interrumpido = true;
     }
 
     /**
@@ -77,7 +77,7 @@ public class EnvioUnicast extends Thread {
                 System.err.println(ex.toString());
             }
         } else {
-            while (!envioExitoso) {
+            while (!interrumpido) {
                 if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_DATA_0) {
                     try {
                         byte[] data = msj.getBytes();
@@ -90,7 +90,7 @@ public class EnvioUnicast extends Thread {
                         }
                     } catch (InterruptedException ex) {
                         //si es interrumpido es porque llegó el ACK0
-                        envioExitoso = true;
+                        interrumpido = true;
                         Logger.getLogger(EnvioUnicast.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 } else if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_DATA_1) {
@@ -105,7 +105,7 @@ public class EnvioUnicast extends Thread {
                         }
                     } catch (InterruptedException ex) {
                         //si es interrumpido es porque llegó el ACK1
-                        envioExitoso = true;
+                        interrumpido = true;
                         Logger.getLogger(EnvioUnicast.class.getName()).log(Level.SEVERE, null, ex);
                     }
                     if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_ACK_0

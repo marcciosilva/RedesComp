@@ -19,8 +19,9 @@ public class LectorMulticast extends Thread {
     private MulticastSocket socketMulticast;
     private Estado estado;
     int paso;
-    DatagramPacket sndpkt; //ultimo paquete enviado
+    DatagramPacket out_pck; //ultimo paquete enviado
     private boolean confiabilidad;
+    boolean interrumpido = false;
 
     private enum Estado {
 
@@ -41,73 +42,77 @@ public class LectorMulticast extends Thread {
         paso = 0;
     }
 
-    private void rdt_rcv(DatagramPacket rcvpkt) {
-        boolean salir = false;
-        String strMensaje = null;
-        while (!salir) {
-            //hasta que no me llegue algo válido para pasarle a la
-            //"capa de aplicación", me quedo acá
-            try {
-                socketMulticast.receive(rcvpkt);
+    //la única situación en la que se interrumpe al thread es si llegó un ACK
+    @Override
+    public void interrupt() {
+        super.interrupt();
+        interrumpido = true;
+    }
 
-                byte[] bytes = rcvpkt.getData();
-                //extraigo el header para manipularlo bitwise
-                //extraigo la data y creo un string a partir de ella
-                byte[] data = Arrays.copyOfRange(bytes, 1, bytes.length - 1);
-                strMensaje = new String(data, 0, data.length);
-                if (estado == Estado.ESPERO_0) {
-                    if (UtilsConfiabilidad.is_not_ACK(rcvpkt) && UtilsConfiabilidad.has_seq1(rcvpkt)
-                            && paso == 1) {
-                        //reenvio el mensaje de ACK anterior
-                        //únicamente se reenvian acknowledges desde el cliente
-                        socketMulticast.send(sndpkt);
-                    } else if (UtilsConfiabilidad.is_not_ACK(rcvpkt) && UtilsConfiabilidad.has_seq0(rcvpkt)) {
-                        //me llega lo que estoy esperando del servidor
-                        sndpkt = UtilsConfiabilidad.makepkt(true, 0);
-                        //broadcasteo el acknowledge
-                        //si le llega a otro usuario, simplemente lo ignora
-                        socketMulticast.send(sndpkt);
-                        paso = 1;
-                        salir = true;
-                        estado = Estado.ESPERO_1;
-                    }
-                } else if (estado == Estado.ESPERO_1) {
-                    if (UtilsConfiabilidad.is_not_ACK(rcvpkt) && UtilsConfiabilidad.has_seq0(rcvpkt)) {
-                        //broadcasteo el paquete ACK anterior
-                        socketMulticast.send(sndpkt);
-                    } else if (UtilsConfiabilidad.is_not_ACK(rcvpkt) && UtilsConfiabilidad.has_seq1(rcvpkt)) {
-                        sndpkt = UtilsConfiabilidad.makepkt(true, 1);
-                        socketMulticast.send(sndpkt);
-                        salir = true;
-                        estado = Estado.ESPERO_0;
-                    }
+    private void rdt_rcv(DatagramPacket rcvpkt) throws IOException {
+        //hasta que no me llegue algo válido para pasarle a la
+        //"capa de aplicación", me quedo acá
+        if (estado == Estado.ESPERO_0) {
+            if (paso == 1
+                    && UtilsConfiabilidad.is_not_ACK(rcvpkt)
+                    && UtilsConfiabilidad.has_seq1(rcvpkt)) {
+                //reenvio el mensaje de ACK anterior
+                //únicamente se reenvian acknowledges desde el cliente
+                socketMulticast.send(out_pck);
+            } else if (UtilsConfiabilidad.is_not_ACK(rcvpkt)
+                    && UtilsConfiabilidad.has_seq0(rcvpkt)) {
+                String msj = UtilsConfiabilidad.extract(rcvpkt);
+                UtilsConfiabilidad.deliver_msj(msj);
+                //me llega lo que estoy esperando del servidor
+                out_pck = UtilsConfiabilidad.makepkt(true, 0);
+                //broadcasteo el acknowledge
+                //si le llega a otro usuario, simplemente lo ignora
+                socketMulticast.send(out_pck);
+                paso = 1;
+                estado = Estado.ESPERO_1;
+            }
+        } else if (estado == Estado.ESPERO_1) {
+            if (UtilsConfiabilidad.is_not_ACK(rcvpkt)
+                    && UtilsConfiabilidad.has_seq0(rcvpkt)) {
+                //broadcasteo el paquete ACK anterior
+                socketMulticast.send(out_pck);
+            } else if (UtilsConfiabilidad.is_not_ACK(rcvpkt)
+                    && UtilsConfiabilidad.has_seq1(rcvpkt)) {
+                try {
+                    String msj = UtilsConfiabilidad.extract(rcvpkt);
+                    UtilsConfiabilidad.deliver_msj(msj);
+                    out_pck = UtilsConfiabilidad.makepkt(true, 1);
+                    socketMulticast.send(out_pck);
+                    estado = Estado.ESPERO_0;
+                } catch (IOException ex) {
+                    Logger.getLogger(LectorMulticast.class.getName()).log(Level.SEVERE, null, ex);
                 }
-            } catch (IOException ex) {
-                Logger.getLogger(LectorMulticast.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-        //genero un thread de DataSend con el mensaje que extraje del paquete
-        //DataSend a su vez va a determinar qué tipo de mensaje es y va a actuar en consecuencia
-        (new DataSend(strMensaje)).start();
     }
 
     @Override
     public void run() {
         socketMulticast = Cliente.getInstance().getMulticastSocket();
-        while (true) {
+        while (!interrumpido) {
             byte[] buffer = new byte[PACKETSIZE];
             DatagramPacket paquete = new DatagramPacket(buffer, buffer.length);
             //variable booleana para determinar si usar rdt o no
             if (confiabilidad) {
-                //recibo mensaje de capa de transporte artificial (con confiabilidad)
-                rdt_rcv(paquete);
+                try {
+                    //recibo mensaje de capa de transporte artificial (con confiabilidad)
+                    socketMulticast.receive(paquete);
+                    rdt_rcv(paquete);
+                } catch (IOException ex) {
+                    Logger.getLogger(LectorMulticast.class.getName()).log(Level.SEVERE, null, ex);
+                }
             } else {
                 try {
                     String strMensaje;
                     socketMulticast.receive(paquete);
                     strMensaje = new String(paquete.getData(), 0, paquete.getLength());
                     System.out.println("Multicast: " + strMensaje);
-                    (new DataSend(strMensaje)).start();
+                    UtilsConfiabilidad.deliver_msj(strMensaje);
                 } catch (IOException ex) {
                     try {
                         this.join();

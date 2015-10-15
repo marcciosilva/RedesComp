@@ -24,6 +24,7 @@ public class LectorUnicast extends Thread {
     public final static int TIMEOUT = 2000;
     public final static int PACKETSIZE = 65536;
     protected DatagramSocket socketUnicast;
+    boolean interrumpido = false;
     //Receptor
 
     protected enum EstadoReceiver {
@@ -45,11 +46,18 @@ public class LectorUnicast extends Thread {
         this.serverPort = serverPort;
     }
 
+    //la única situación en la que se interrumpe al thread es si llegó un ACK
+    @Override
+    public void interrupt() {
+        super.interrupt();
+        interrumpido = true;
+    }
+
     @Override
     public void run() {
         estadoReceiver = EstadoReceiver.ESPERO_DATA_0;
         socketUnicast = cliente.getUnicastSocket();
-        while (true) {
+        while (!interrumpido) {
             try {
                 byte[] data = new byte[PACKETSIZE];
                 DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
@@ -69,46 +77,40 @@ public class LectorUnicast extends Thread {
      * Recibe un mensaje aplicando confiabilidad. El mensaje se comunica hacia
      * la interfaz mediante un thread DataSend.
      *
-     * @param paquete
+     * @param in_pck
      * @throws IOException
      */
-    public void rdt_rcv(DatagramPacket paquete) throws IOException {
+    public void rdt_rcv(DatagramPacket in_pck) throws IOException {
         if (!confiabilidad) {
-            String msj = new String(paquete.getData()).split("\0")[0];
-            (new DataSend(msj)).start();
+            String msj = new String(in_pck.getData()).split("\0")[0];
+            UtilsConfiabilidad.deliver_msj(msj);
         } else {
-            if (UtilsConfiabilidad.is_ACK(paquete)) { //acknowledge para mensaje enviado por el sender
+            if (UtilsConfiabilidad.is_ACK(in_pck)) { //acknowledge para mensaje enviado por el sender
                 if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_ACK_0
-                        && UtilsConfiabilidad.has_seq0(paquete)
+                        && UtilsConfiabilidad.has_seq0(in_pck)
                         || cliente.estadoSender == Cliente.EstadoSender.ESPERO_ACK_1
-                        && UtilsConfiabilidad.has_seq1(paquete)) {
+                        && UtilsConfiabilidad.has_seq1(in_pck)) {
                     cliente.envioFinalizado();
                 }
             } else {
                 if (estadoReceiver == EstadoReceiver.ESPERO_DATA_0) {
-                    if (UtilsConfiabilidad.has_seq1(paquete)) {
+                    if (UtilsConfiabilidad.has_seq1(in_pck)) {
                         sndpkt = UtilsConfiabilidad.makepkt(true, 1);
                         socketUnicast.send(sndpkt);
-                    } else if (UtilsConfiabilidad.has_seq0(paquete)) {
-                        byte[] bytes = paquete.getData();
-                        byte[] data = Arrays.copyOfRange(bytes, 1, bytes.length - 1);
-                        String strMensaje = new String(data, 0, data.length);
-                        //paso mensaje a capa de aplicación
-                        (new DataSend(strMensaje)).start();
+                    } else if (UtilsConfiabilidad.has_seq0(in_pck)) {
+                        String msj = UtilsConfiabilidad.extract(in_pck);
+                        UtilsConfiabilidad.deliver_msj(msj);
                         sndpkt = UtilsConfiabilidad.makepkt(true, 0);
                         socketUnicast.send(sndpkt);
                         estadoReceiver = EstadoReceiver.ESPERO_DATA_1;
                     }
                 } else if (estadoReceiver == EstadoReceiver.ESPERO_DATA_1) {
-                    if (UtilsConfiabilidad.has_seq0(paquete)) {
+                    if (UtilsConfiabilidad.has_seq0(in_pck)) {
                         sndpkt = UtilsConfiabilidad.makepkt(true, 0);
                         socketUnicast.send(sndpkt);
-                    } else if (UtilsConfiabilidad.has_seq1(paquete)) {
-                        byte[] bytes = paquete.getData();
-                        byte[] data = Arrays.copyOfRange(bytes, 1, bytes.length - 1);
-                        String strMensaje = new String(data, 0, data.length);
-                        //paso mensaje a capa de aplicación
-                        (new DataSend(strMensaje)).start();
+                    } else if (UtilsConfiabilidad.has_seq1(in_pck)) {
+                        String msj = UtilsConfiabilidad.extract(in_pck);
+                        UtilsConfiabilidad.deliver_msj(msj);
                         sndpkt = UtilsConfiabilidad.makepkt(true, 1);
                         socketUnicast.send(sndpkt);
                         estadoReceiver = EstadoReceiver.ESPERO_DATA_0;

@@ -1,6 +1,7 @@
 package redes;
 
 import java.net.DatagramPacket;
+import java.util.Arrays;
 
 /**
  * Clase que implementa confiabilidad, para uso de los demás threads de unicast
@@ -8,6 +9,18 @@ import java.net.DatagramPacket;
  * @author marccio
  */
 public class UtilsConfiabilidad {
+
+    public static void deliver_msj(String msj) {
+        //envía mensaje a la capa de aplicación generando un thread DataSend
+        (new DataSend(msj)).start();
+    }
+
+    public static String extract(DatagramPacket pkt) {
+        //extrae el string del mensaje sin contar la cabecera
+        byte[] bytes = pkt.getData();
+        byte[] data = Arrays.copyOfRange(bytes, 1, bytes.length - 1);
+        return new String(data, 0, data.length);
+    }
 
     public static boolean is_not_ACK(DatagramPacket rcvpkt) {
         //devuelve true si el paquete no es un acknowledge
