@@ -9,6 +9,15 @@ import java.net.DatagramPacket;
  */
 public class UtilsConfiabilidad {
 
+    public static boolean is_not_ACK(DatagramPacket rcvpkt) {
+        //devuelve true si el paquete no es un acknowledge
+        byte[] bytes = rcvpkt.getData();
+        byte header = bytes[0];
+        int isAck = (int) header & 0x80; //mask 10000000
+        //devuelvo true si el bit estaba apagado
+        return isAck == 0;
+    }
+
     public static boolean is_ACK(DatagramPacket rcvpkt) {
         //devuelve true si el paquete es un acknowledge
         byte[] bytes = rcvpkt.getData();
