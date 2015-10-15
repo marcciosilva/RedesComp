@@ -3,7 +3,6 @@ package redes;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.MulticastSocket;
-import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import static redes.Cliente.PACKETSIZE;
@@ -43,12 +42,11 @@ public class LectorMulticast extends Thread {
     }
 
     //la única situación en la que se interrumpe al thread es si llegó un ACK
-    @Override
-    public void interrupt() {
-        super.interrupt();
-        interrumpido = true;
-    }
-
+//    @Override
+//    public void interrupt() {
+//        super.interrupt();
+//        interrumpido = true;
+//    }
     private void rdt_rcv(DatagramPacket rcvpkt) throws IOException {
         //hasta que no me llegue algo válido para pasarle a la
         //"capa de aplicación", me quedo acá
@@ -94,7 +92,8 @@ public class LectorMulticast extends Thread {
     @Override
     public void run() {
         socketMulticast = Cliente.getInstance().getMulticastSocket();
-        while (!interrumpido) {
+//        while (!interrumpido) {
+        while (true) { //no necesita ser interrumpido, se cierra al cerrar el socket
             byte[] buffer = new byte[PACKETSIZE];
             DatagramPacket paquete = new DatagramPacket(buffer, buffer.length);
             //variable booleana para determinar si usar rdt o no

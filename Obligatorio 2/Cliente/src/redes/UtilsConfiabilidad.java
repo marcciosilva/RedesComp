@@ -52,18 +52,13 @@ public class UtilsConfiabilidad {
         //devuelve true si el numero de secuencia del paquete coincide con 0
         byte[] bytes = rcvpkt.getData();
         byte header = bytes[0];
-        int seqNum = (int) header & 0x02; //00000010 por ahora, aunque tendría que ser 00000000
+        int seqNum = (int) header & 0x01; //00000010 por ahora, aunque tendría que ser 00000000
         return seqNum == 0;
     }
 
     public static DatagramPacket makeDatapkt(boolean is_ACK, int seqNum, DatagramPacket paquete) {
         //armar paquete a enviar
-        byte header;
-        if (seqNum == 0) {
-            header = (byte) 0x02; //provisorio
-        } else {
-            header = (byte) seqNum;
-        }
+        byte header = (byte) seqNum;
         if (is_ACK) {
             header = (byte) (header & 0xff);
         } else {
@@ -80,12 +75,7 @@ public class UtilsConfiabilidad {
     public static DatagramPacket makepkt(boolean is_ACK, int seqNum) {
         //armar paquete de acknowledge con numero de secuencia igual
         //a seqNum
-        byte header;
-        if (seqNum == 0) {
-            header = (byte) 0x02; //provisorio
-        } else {
-            header = (byte) seqNum;
-        }
+        byte header = (byte) seqNum;
         if (is_ACK) {
             header = (byte) (header & 0xff);
         } else {

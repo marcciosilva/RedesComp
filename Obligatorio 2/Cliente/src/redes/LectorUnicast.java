@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -47,17 +46,16 @@ public class LectorUnicast extends Thread {
     }
 
     //la única situación en la que se interrumpe al thread es si llegó un ACK
-    @Override
-    public void interrupt() {
-        super.interrupt();
-        interrumpido = true;
-    }
-
+//    @Override
+//    public void interrupt() {
+//        super.interrupt();
+//        interrumpido = true;
+//    }
     @Override
     public void run() {
         estadoReceiver = EstadoReceiver.ESPERO_DATA_0;
         socketUnicast = cliente.getUnicastSocket();
-        while (!interrumpido) {
+        while (true) {
             try {
                 byte[] data = new byte[PACKETSIZE];
                 DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);

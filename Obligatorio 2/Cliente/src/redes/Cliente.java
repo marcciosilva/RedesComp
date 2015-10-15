@@ -382,6 +382,7 @@ public class Cliente extends javax.swing.JFrame {
      * cerrando los sockets correspondientes y limpiando el área de chat
      */
     public void terminarConexion() {
+        //cambiar esto por la magia del .join de lectorMulticast
         if (threadEnvioUnicastActual.isAlive()) {
             threadEnvioUnicastActual.interrupt();
             threadEnvioUnicastActual = null;
@@ -489,6 +490,11 @@ public class Cliente extends javax.swing.JFrame {
         if (threadEnvioUnicastActual.isAlive()) {
             threadEnvioUnicastActual.interrupt();
             threadEnvioUnicastActual = null;
+        }
+        if (estadoSender == EstadoSender.ESPERO_ACK_0) {
+            estadoSender = EstadoSender.ESPERO_DATA_1;
+        } else if (estadoSender == EstadoSender.ESPERO_ACK_1) {
+            estadoSender = EstadoSender.ESPERO_DATA_0;
         }
         habilitarEnvios();
     }
