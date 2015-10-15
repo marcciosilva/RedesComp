@@ -63,6 +63,9 @@ public class LectorUnicast extends Thread {
                 rdt_rcv(paquete);
             } catch (IOException ex) {
                 try {
+                    //cuando se termine la conexión y se cierre el socket
+                    //va a salir por acá; en cualquier otra situación, se sale
+                    //con un interrupt
                     this.join();
                 } catch (InterruptedException ex1) {
                     Logger.getLogger(LectorMulticast.class.getName()).log(Level.SEVERE, null, ex1);
