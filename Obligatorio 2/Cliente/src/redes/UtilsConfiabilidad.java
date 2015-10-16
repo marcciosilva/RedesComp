@@ -20,6 +20,7 @@ public class UtilsConfiabilidad {
         //extrae el string del mensaje sin contar la cabecera
         byte[] bytes = pkt.getData();
         byte[] data = Arrays.copyOfRange(bytes, 1, bytes.length - 1);
+        System.out.println("Largo de la data sin el header : " + String.valueOf(data.length));
         return new String(data, 0, data.length);
     }
 
@@ -53,7 +54,7 @@ public class UtilsConfiabilidad {
         //devuelve true si el numero de secuencia del paquete coincide con 0
         byte[] bytes = rcvpkt.getData();
         byte header = bytes[0];
-        int seqNum = (int) header & 0x01; //00000010 por ahora, aunque tendría que ser 00000000
+        int seqNum = (int) header & 0x01;
         return seqNum == 0;
     }
 

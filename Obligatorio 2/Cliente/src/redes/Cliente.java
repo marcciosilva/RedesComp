@@ -69,9 +69,7 @@ public class Cliente extends javax.swing.JFrame {
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Cliente de Chat - Redes 2015");
         setMinimumSize(new java.awt.Dimension(640, 490));
-        setPreferredSize(new java.awt.Dimension(640, 490));
         setResizable(false);
-        setSize(new java.awt.Dimension(640, 490));
         addWindowListener(new java.awt.event.WindowAdapter() {
             public void windowClosing(java.awt.event.WindowEvent evt) {
                 cerrandoVentanaEvent(evt);
@@ -82,6 +80,12 @@ public class Cliente extends javax.swing.JFrame {
         jLabelHostIP.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         jLabelHostIP.setText("Host IP:");
         getContentPane().add(jLabelHostIP, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 40, 70, -1));
+
+        jTextFieldHostIP.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTextFieldHostIPActionPerformed(evt);
+            }
+        });
         getContentPane().add(jTextFieldHostIP, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 40, 120, -1));
         jTextFieldHostIP.setText("127.0.0.1");
 
@@ -306,6 +310,10 @@ public class Cliente extends javax.swing.JFrame {
         labelDestinatario.setVisible(false);
     }//GEN-LAST:event_buttonPublicoActionPerformed
 
+    private void jTextFieldHostIPActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextFieldHostIPActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jTextFieldHostIPActionPerformed
+
     private void enviarMensaje(String msj) {
         deshabilitarEnvios();
         threadEnvioUnicastActual = new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort);
@@ -366,7 +374,6 @@ public class Cliente extends javax.swing.JFrame {
         //hay que enviar un IS_ALIVE al server por unicast
         String msj = "IS_ALIVE\0";
         enviarMensaje(msj);
-
     }
 
     public void comunicarMensajePrivado(String msj) {

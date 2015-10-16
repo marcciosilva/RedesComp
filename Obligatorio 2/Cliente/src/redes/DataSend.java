@@ -19,9 +19,9 @@ public class DataSend extends Thread {
     public DataSend(String msj) {
         System.out.println("Datasend: " + msj);
         Cliente instance = Cliente.getInstance();
-        if (msj.equals("LOGIN_OK")) {
+        if (msj.contains("LOGIN_OK")) {
             instance.comunicarOK();
-        } else if (msj.equals("LOGIN_FAILED")) {
+        } else if (msj.contains("LOGIN_FAILED")) {
             JOptionPane.showMessageDialog(
                     instance,
                     "Ya existe un usuario con el apodo " + instance.getApodo()
@@ -29,11 +29,11 @@ public class DataSend extends Thread {
                     "Cliente",
                     JOptionPane.INFORMATION_MESSAGE);
             instance.comunicarNoOk();
-        } else if (msj.equals("GOODBYE")) {
+        } else if (msj.contains("GOODBYE")) {
             instance.terminarConexion();
         } else if (msj.contains("CONNECTED")) {
             instance.comunicarConectados(msj);
-        } else if (msj.equals("ALIVE")) {
+        } else if (msj.contains("ALIVE")) {
             instance.comunicarAlive();
         } else if (msj.contains("RELAYED_MESSAGE")) {
             instance.comunicarMensaje(msj);
