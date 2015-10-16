@@ -58,6 +58,7 @@ public class EnvioUnicast extends Thread {
     public void interrupt() {
         super.interrupt();
         interrumpido = true;
+//        socketUnicast = null;
     }
 
     /**
@@ -91,6 +92,7 @@ public class EnvioUnicast extends Thread {
                     } catch (InterruptedException ex) {
                         //si es interrumpido es porque llegó el ACK0
                         interrumpido = true;
+//                        socketUnicast = null;
                         Logger.getLogger(EnvioUnicast.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 } else if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_DATA_1) {
@@ -106,6 +108,7 @@ public class EnvioUnicast extends Thread {
                     } catch (InterruptedException ex) {
                         //si es interrumpido es porque llegó el ACK1
                         interrumpido = true;
+//                        socketUnicast = null;
                         Logger.getLogger(EnvioUnicast.class.getName()).log(Level.SEVERE, null, ex);
                     }
                     if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_ACK_0
@@ -118,6 +121,7 @@ public class EnvioUnicast extends Thread {
                                 wait(TIMEOUT);
                             } catch (InterruptedException ex) {
                                 interrumpido = true;
+//                                socketUnicast = null;
                                 Logger.getLogger(EnvioUnicast.class.getName()).log(Level.SEVERE, null, ex);
                             }
                         }

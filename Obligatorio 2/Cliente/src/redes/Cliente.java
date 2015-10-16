@@ -482,6 +482,7 @@ public class Cliente extends javax.swing.JFrame {
     }
 
     public void envioFinalizado() {
+        System.out.println("Envío finalizado correctamente");
         //uso el interrumpir sólo para este thread porque
         //no quiero cerrar el socketUnicast y generar uno nuevo para
         //el siguiente thread de unicast que pueda generar
