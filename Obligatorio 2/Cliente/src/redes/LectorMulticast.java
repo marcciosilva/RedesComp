@@ -33,7 +33,8 @@ public class LectorMulticast extends Thread {
      * @param confiabilidad Si se pasa true, se aplica rdt para multicast
      */
     public LectorMulticast(boolean confiabilidad) {
-        this.confiabilidad = confiabilidad;
+//        this.confiabilidad = confiabilidad;
+        this.confiabilidad = false;
         // Este es el thread que va a escuchar por nuevos mensajes y mostrarlos en el area del chat.
         //inicializo máquina de estados
         //espero numero de secuencia 0 de la capa inferior

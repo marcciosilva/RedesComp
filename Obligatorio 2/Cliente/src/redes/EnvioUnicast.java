@@ -23,7 +23,7 @@ public class EnvioUnicast extends Thread {
     InetAddress serverIP;
     int serverPort;
     boolean confiabilidad;
-    public final static int TIMEOUT = 2000;
+    public final static int TIMEOUT = 5000;
     public final static int PACKETSIZE = 65536;
     protected DatagramSocket socketUnicast;
 

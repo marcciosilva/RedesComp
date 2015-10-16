@@ -547,7 +547,7 @@ public class Cliente extends javax.swing.JFrame {
     private final String strEnLinea = "En línea";
     private boolean conectado = false;
     private String apodo;
-    private boolean aplicarConfiabilidad = false;
+    private boolean aplicarConfiabilidad = true;
     private LectorMulticast multicastThread;
     private LectorUnicast listenerUnicast;
     // Variables declaration - do not modify//GEN-BEGIN:variables
