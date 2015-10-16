@@ -281,17 +281,17 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
         t1.detach();
         cantMensajes++;
 
-        // Testing solamente (solo cambiar la ip)
-        //		sockaddr_in cliente_over_hamachi;
-        //		cliente_over_hamachi.sin_family = PF_INET;
-        //		cliente_over_hamachi.sin_addr.s_addr = inet_addr("25.0.32.206");
-        //		cliente_over_hamachi.sin_port = htons(6789);
-        //		char * resp_ptr2 = new char[MAX_MESSAGE_LENGHT];
-        //		*resp_ptr2 = 0;
-        //		strcpy(resp_ptr2, resp.c_str());
-        //		strcat(resp_ptr2, mensaje);
-        //		thread t2(rdt_send_unicast, resp_ptr2, cliente_over_hamachi);
-        //		t2.detach();
+		// Testing solamente(solo cambiar la ip)
+		sockaddr_in cliente_over_hamachi;
+		cliente_over_hamachi.sin_family = PF_INET;
+		cliente_over_hamachi.sin_addr.s_addr = inet_addr("25.105.117.246");
+		cliente_over_hamachi.sin_port = htons(6789);
+		char * resp_ptr2 = new char[MAX_MESSAGE_LENGHT];
+		*resp_ptr2 = 0;
+		strcpy(resp_ptr2, resp.c_str());
+		strcat(resp_ptr2, mensaje);
+		thread t2(rdt_send_unicast, resp_ptr2, cliente_over_hamachi);
+		t2.detach();
 
     } else if (strcmp(comando, "PRIVATE_MESSAGE") == 0) {
         // Enviar por unicast el mensaje
@@ -527,7 +527,7 @@ char* makepkt(bool is_ACK, bool seqNum, string msj) {
     } else {
         char* pkt = new char[msj.length() + 2];
         // Escribo el header
-        pkt[0] = seqNum;
+        pkt[0] = seqNum | 2;
 
         // Escribo el mensaje
         for (int i = 0; i < msj.length(); i++) {
@@ -669,6 +669,7 @@ void rdt_send_unicast(char* msj, const sockaddr_in & cli_addr) {
     lista_clientes_mutex.unlock();
     cout << "rdt_send_unicast liberó el lock de la lista de clientes rdt" << endl;
     // Envío
+	cout << "se va a enviar" << pkt[1] << endl;
     thread t1(udt_send_unicast, pkt, cli_addr);
     t1.detach();
 }
