@@ -19,6 +19,9 @@
 #include <mutex>
 #include <condition_variable>
 
+// Debugging
+#include <bitset>
+
 using namespace std;
 
 #define MAX_MESSAGE_LENGHT 1023		// (65507 byte - 1 byte RDT header)
@@ -134,7 +137,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 
     // Imprime en salida standar cada vez que se recibe un mensaje como pide la letra
     cout << "Mensaje recibido desde: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << endl;
-    cout << "> " << msj << endl;
+    cout << "MSJ> " << msj << endl << endl;
 
     // Parseo del mensaje recibido
     char * comando = strtok(msj, " ");
@@ -358,6 +361,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
         }
 
     }
+	delete [] msj;
 };
 
 //void rdt_rcv_unicast() {
@@ -417,7 +421,7 @@ void ping_clientes() {
         for (vector<cliente>::iterator it = lista_clientes.begin(); it != lista_clientes.end(); it++) {
             char * alive_ptr = new char [alive_str.length() + 1];
             strcpy(alive_ptr, alive_str.c_str());
-            rdt_send_unicast(alive_ptr, it->address);
+            thread t1(rdt_send_unicast, alive_ptr, it->address);
         }
     }
 }
@@ -569,7 +573,7 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 
     if (encontre_cliente) {
         if (is_ACK(msj[0])) {
-            cout << "El mensaje recibido fue un ACK" << endl;
+            cout << "Es ACK" << endl;
             // Es un ACK para procesar desde el sender
             // Me fijo en qué estado estoy para ese cliente y lo actualizo
             if ((hasSeqNum(msj[0], 0) && cliente_ptr->estado_sender == 1)
@@ -578,7 +582,7 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
                 cliente_ptr->estado_sender = (cliente_ptr->estado_sender + 1) % 4;
             }
         } else {
-            cout << "El mensaje recibido no fue un ACK" << endl;
+            cout << "No es ACK" << endl;
             // Es un mensaje nuevo
             // Me fijo si tiene el número de seq esperado
             if (hasSeqNum(msj[0], cliente_ptr->expected_seq_num)) {
@@ -597,7 +601,7 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
     } else {
         // Cliente nuevo.
         // Añadir el cliente a la lista
-        cout << "El cliente era nuevo" << endl;
+        cout << "Nuevo cliente" << endl;
         cliente_rdt nuevo_cliente;
         nuevo_cliente.address = cli_addr;
         nuevo_cliente.estado_sender = 0;
@@ -635,6 +639,9 @@ void udt_rcv_unicast() {
 
         // Lo termino con un fin de línea
         pkt[strlen(temp) + 1] = 0;
+		cout << "Se recibio packete con header: " << bitset<8>(pkt[0]) << endl;
+		char* p = &pkt[1];
+		cout << "y data: " << p << endl << endl;
         thread t1(rdt_rcv_unicast, pkt, si_cliente);
         t1.detach();
     }
@@ -642,7 +649,7 @@ void udt_rcv_unicast() {
 
 void rdt_send_unicast(char* msj, const sockaddr_in & cli_addr) {
     cout << "Thread rdt_send_unicast para enviar: " << msj << endl;
-    lista_clientes_rdt_mutex.lock();
+    //lista_clientes_rdt_mutex.lock();
     cout << "rdt_send_unicast consiguió el lock de la lista de clientes rdt" << endl;
     // Busco el cliente
     bool encontre_cliente = false;
@@ -666,7 +673,7 @@ void rdt_send_unicast(char* msj, const sockaddr_in & cli_addr) {
     cliente_ptr->estado_sender = (cliente_ptr->estado_sender + 1) % 4;
     cliente_ptr->timer = time(NULL);
     strcpy(cliente_ptr->ult_pkt_enviado, pkt);
-    lista_clientes_mutex.unlock();
+    //lista_clientes_mutex.unlock();
     cout << "rdt_send_unicast liberó el lock de la lista de clientes rdt" << endl;
     // Envío
 	cout << "se va a enviar" << pkt[1] << endl;
@@ -677,7 +684,6 @@ void rdt_send_unicast(char* msj, const sockaddr_in & cli_addr) {
 void timeout_checker() {
     lock_guard<mutex> lock(lista_clientes_rdt_mutex);
     time_t now = time(NULL);
-    vector<cliente_rdt>::iterator it = lista_clientes_rdt.begin();
     for (vector<cliente_rdt>::iterator it = lista_clientes_rdt.begin(); it != lista_clientes_rdt.end(); it++) {
         if (it->timer != 0 && difftime(now, it->timer) > TIMEOUT_RDT) {
             // Re-envío
