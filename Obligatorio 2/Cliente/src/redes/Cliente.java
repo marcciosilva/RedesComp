@@ -263,6 +263,8 @@ public class Cliente extends javax.swing.JFrame {
                     msj = msj.concat(destinatario + " ");
                     msj = msj.concat(contenidoMsj);
                     msj = msj.concat("\0");
+                    //muestro mi propio mensaje en el chat antes de enviarlo
+                    //para poder seguir el hilo de la conversación
                     updateChat(apodo + " > " + destinatario + ": " + contenidoMsj, true, false);
                     enviarMensaje(msj);
                 } else {
@@ -334,10 +336,12 @@ public class Cliente extends javax.swing.JFrame {
      * @return Referencia al socketUnicast
      */
     public DatagramSocket getUnicastSocket() {
+        //es thread-safe, no hay que sincronizar su uso
         return socketUnicast;
     }
 
     public MulticastSocket getMulticastSocket() {
+        //es thread-safe, no hay que sincronizar su uso
         return socketMulticast;
     }
 
@@ -367,7 +371,6 @@ public class Cliente extends javax.swing.JFrame {
 
     public void comunicarMensajePrivado(String msj) {
         String remitente_y_mensaje[] = msj.split(" ", 2)[1].split(" ", 2);
-//        String aviso = "Mensaje privado de " + remitente_y_mensaje[0] + ": " + remitente_y_mensaje[1];
         String aviso = remitente_y_mensaje[0] + " > " + apodo + ": " + remitente_y_mensaje[1];
         updateChat(aviso, true, false);
     }
@@ -382,12 +385,6 @@ public class Cliente extends javax.swing.JFrame {
      * cerrando los sockets correspondientes y limpiando el área de chat
      */
     public void terminarConexion() {
-        //cambiar esto por la magia del .join de lectorMulticast
-        if (threadEnvioUnicastActual.isAlive()) {
-            threadEnvioUnicastActual.interrupt();
-            threadEnvioUnicastActual = null;
-        }
-
         // cierro el socket unicast
         socketUnicast.close();
 
@@ -485,12 +482,14 @@ public class Cliente extends javax.swing.JFrame {
     }
 
     public void envioFinalizado() {
-        //aca tengo que parar el thread de envio, matarlo
-        //eventualmente detiene un timer, etc.
+        //uso el interrumpir sólo para este thread porque
+        //no quiero cerrar el socketUnicast y generar uno nuevo para
+        //el siguiente thread de unicast que pueda generar
         if (threadEnvioUnicastActual.isAlive()) {
             threadEnvioUnicastActual.interrupt();
             threadEnvioUnicastActual = null;
         }
+        //cambio estado de la máquina del sender
         if (estadoSender == EstadoSender.ESPERO_ACK_0) {
             estadoSender = EstadoSender.ESPERO_DATA_1;
         } else if (estadoSender == EstadoSender.ESPERO_ACK_1) {

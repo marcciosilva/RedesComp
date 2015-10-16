@@ -86,7 +86,7 @@ public class EnvioUnicast extends Thread {
                         socketUnicast.send(out_pck);
                         cliente.estadoSender = Cliente.EstadoSender.ESPERO_ACK_0;
                         synchronized (this) {
-                            wait(TIMEOUT); //espero 5 segundos
+                            wait(TIMEOUT);
                         }
                     } catch (InterruptedException ex) {
                         //si es interrumpido es porque llegó el ACK0
@@ -101,7 +101,7 @@ public class EnvioUnicast extends Thread {
                         socketUnicast.send(out_pck);
                         cliente.estadoSender = Cliente.EstadoSender.ESPERO_ACK_1;
                         synchronized (this) {
-                            wait(TIMEOUT); //espero 5 segundos
+                            wait(TIMEOUT);
                         }
                     } catch (InterruptedException ex) {
                         //si es interrumpido es porque llegó el ACK1
@@ -113,6 +113,14 @@ public class EnvioUnicast extends Thread {
                         //si saltó el timer entro por acá, sea que espere ACK0 o ACK1
                         //reenvíos
                         socketUnicast.send(out_pck);
+                        synchronized (this) {
+                            try {
+                                wait(TIMEOUT);
+                            } catch (InterruptedException ex) {
+                                interrumpido = true;
+                                Logger.getLogger(EnvioUnicast.class.getName()).log(Level.SEVERE, null, ex);
+                            }
+                        }
                     }
                 }
             }
