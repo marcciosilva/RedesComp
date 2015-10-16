@@ -5,6 +5,7 @@
 #include <string.h>
 #include <iostream>
 #include <time.h>
+#include <cmath>
 #include <unistd.h>
 
 // Sockets
@@ -16,7 +17,7 @@
 #include <pthread.h>
 #include <thread>
 #include <mutex>
-#include <cmath>
+#include <condition_variable>
 
 using namespace std;
 
@@ -56,31 +57,80 @@ int cantConexiones = 0;
 std::chrono::duration<double> wallTime;
 chrono::system_clock::time_point actual;
 
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Buffer %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% //
+
+struct BoundedBuffer {
+	char** buffer;
+	int capacity;
+
+	int front;
+	int rear;
+	int count;
+
+	mutex lock;
+
+	condition_variable not_full;
+	condition_variable not_empty;
+
+	BoundedBuffer(int capacity) : capacity(capacity), front(0), rear(0), count(0) {
+		buffer = new char*[capacity];
+	}
+
+	~BoundedBuffer() {
+		delete[] buffer;
+	}
+
+	void deposit(char* data) {
+		unique_lock<mutex> l(lock);
+
+		not_full.wait(l, [this]() {
+			return count != capacity; });
+
+		buffer[rear] = data;
+		rear = (rear + 1) % capacity;
+		++count;
+
+		not_empty.notify_one();
+	}
+
+	char* fetch() {
+		unique_lock<mutex> l(lock);
+
+		not_empty.wait(l, [this]() {
+			return count != 0; });
+
+		char* result = buffer[front];
+		front = (front + 1) % capacity;
+		--count;
+
+		not_full.notify_one();
+
+		return result;
+	}
+};
+
 struct cliente_rdt {
 	sockaddr_in address;
 	time_t timer;
 	int estado_sender; // De 0 a 3
 	bool expected_seq_num; // el seq num que espero recibir del cliente
 	char* ult_pkt_enviado;
+	BoundedBuffer* buffer_de_salida;
 };
 
 mutex lista_clientes_rdt_mutex;
 vector<cliente_rdt> lista_clientes_rdt;
 
-void udt_send_unicast(char* msj, const sockaddr_in& cli_addr) {
-	cout << "udt_send_unicast message: " << msj << " to: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << endl;
-	sendto(sockUnicast, msj, strlen(msj), 0, (struct sockaddr *) &cli_addr, sizeof (cli_addr));
-	delete [] msj;
-}
+// %%%%%%%%%%%%%%%%%%%% Forward Declarations %%%%%%%%%%%%%%%%%%%%%% //
 
-void rdt_send_multicast(char* msj) {
-	cout << "rdt_send_multicast message: " << msj << endl;
-	sendto(sockMulticast, msj, strlen(msj), 0, (struct sockaddr *) &servMulticAddr, sizeof (struct sockaddr_in));
-	delete [] msj;
-}
+void rdt_send_unicast(char* msj, const sockaddr_in& cli_addr);
+
+void rdt_send_multicast(char* msj);
+
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% APLICACIÓN %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% //
 
 void deliver_message(char* msj, const sockaddr_in cli_addr) {
-	lock_guard<mutex> lock(lista_clientes_mutex); // el lock se libera automáticamente al finalizar el bloque
+	lock_guard<mutex> lock(lista_clientes_mutex);
 
 	// Imprime en salida standar cada vez que se recibe un mensaje como pide la letra
 	cout << "Mensaje recibido desde: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << endl;
@@ -103,20 +153,20 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		}
 
 		if (nick_en_uso) {
-			// El nick ya está en uso. Envío "NOK"
+			// El nick ya está en uso
 			string resp = "LOGIN_FAILED";
 			char *resp_ptr = new char[resp.length() + 1];
 			*resp_ptr = 0;
 			strcpy(resp_ptr, resp.c_str());
-			thread t1(udt_send_unicast, resp_ptr, cli_addr);
+			thread t1(rdt_send_unicast, resp_ptr, cli_addr);
 			t1.detach();
 		} else {
-			// El nick está disponible. Envío "OK"
+			// El nick está disponible
 			string resp = "LOGIN_OK";
 			char *resp_ptr = new char[resp.length() + 1];
 			*resp_ptr = 0;
 			strcpy(resp_ptr, resp.c_str());
-			thread t1(udt_send_unicast, resp_ptr, cli_addr);
+			thread t1(rdt_send_unicast, resp_ptr, cli_addr);
 			t1.detach();
 
 			// Añadir el cliente a la lista
@@ -144,7 +194,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		char *resp_ptr = new char[resp.length() + 1];
 		*resp_ptr = 0;
 		strcpy(resp_ptr, resp.c_str());
-		thread t1(udt_send_unicast, resp_ptr, cli_addr);
+		thread t1(rdt_send_unicast, resp_ptr, cli_addr);
 		t1.detach();
 
 		// Quitar al cliente de la lista
@@ -193,7 +243,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		strcpy(resp_ptr, resp.c_str());
 
 		// Envío
-		thread t1(udt_send_unicast, resp_ptr, cli_addr);
+		thread t1(rdt_send_unicast, resp_ptr, cli_addr);
 		t1.detach();
 		cantMensajes++;
 
@@ -293,7 +343,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 
 		if (encontreDestinatario) {
 			// Envío
-			thread t1(udt_send_unicast, resp_ptr, dest_addr);
+			thread t1(rdt_send_unicast, resp_ptr, dest_addr);
 			t1.detach();
 			cantMensajes++;
 
@@ -302,7 +352,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 			char *resp_ptr = new char[resp.length() + 1];
 			*resp_ptr = 0;
 			strcpy(resp_ptr, resp.c_str());
-			thread t1(udt_send_unicast, resp_ptr, cli_addr);
+			thread t1(rdt_send_unicast, resp_ptr, cli_addr);
 			t1.detach();
 		}
 
@@ -310,19 +360,19 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 	}
 };
 
-void rdt_rcv_unicast() {
-	char buffer[MAX_PACKET_SIZE];
-	// Para guardar la dirección del cliente
-	struct sockaddr_in si_cliente;
-	int slen = sizeof (si_cliente);
-
-	while (true) {
-		recvfrom(sockUnicast, buffer, MAX_PACKET_SIZE, 0, (struct sockaddr *) &si_cliente, (socklen_t *) & slen);
-		char* temp = buffer;
-		thread t1(deliver_message, temp, si_cliente);
-		t1.detach();
-	}
-}
+//void rdt_rcv_unicast() {
+//	char buffer[MAX_PACKET_SIZE];
+//	// Para guardar la dirección del cliente
+//	struct sockaddr_in si_cliente;
+//	int slen = sizeof (si_cliente);
+//
+//	while (true) {
+//		recvfrom(sockUnicast, buffer, MAX_PACKET_SIZE, 0, (struct sockaddr *) &si_cliente, (socklen_t *) & slen);
+//		char* temp = buffer;
+//		thread t1(deliver_message, temp, si_cliente);
+//		t1.detach();
+//	}
+//}
 
 void unicastSocket_setUp() {
 	memset(&sockUnicast, 0, sizeof (struct sockaddr_in));
@@ -360,15 +410,6 @@ void multicastSocket_setUp() {
 	servMulticAddr.sin_port = htons(multicastPort);
 }
 
-vector<sockaddr_in>* client_addresses() {
-	lock_guard<mutex> lock(lista_clientes_mutex);
-	vector<sockaddr_in>* lista_direcciones_ptr = new vector<sockaddr_in>();
-	for (vector<cliente>::iterator it = lista_clientes.begin(); it != lista_clientes.end(); it++) {
-		lista_direcciones_ptr->push_back(it->address);
-	}
-	return lista_direcciones_ptr;
-}
-
 void ping_clientes() {
 	string alive_str = "ALIVE";
 	lock_guard<mutex> lock(lista_clientes_mutex);
@@ -376,7 +417,7 @@ void ping_clientes() {
 		for (vector<cliente>::iterator it = lista_clientes.begin(); it != lista_clientes.end(); it++) {
 			char * alive_ptr = new char [alive_str.length() + 1];
 			strcpy(alive_ptr, alive_str.c_str());
-			udt_send_unicast(alive_ptr, it->address);
+			rdt_send_unicast(alive_ptr, it->address);
 		}
 	}
 }
@@ -456,6 +497,10 @@ bool hasSeqNum(char pkt_header, bool expectedSeqNum) {
 	return ((pkt_header & 1) == expectedSeqNum);
 }
 
+bool getSeqNum(char pkt_header) {
+	return (pkt_header & 1);
+}
+
 char* makepkt(bool is_ACK, bool seqNum, string msj) {
 	if (is_ACK) {
 		char* pkt = new char;
@@ -477,7 +522,20 @@ char* makepkt(bool is_ACK, bool seqNum, string msj) {
 	}
 }
 
-void maq_estados_sender(char* msj, const sockaddr_in cli_addr) {
+void udt_send_multicast(char* msj) {
+	cout << "rdt_send_multicast message: " << msj << endl;
+	sendto(sockMulticast, msj, strlen(msj), 0, (struct sockaddr *) &servMulticAddr, sizeof (struct sockaddr_in));
+	delete [] msj;
+}
+
+void udt_send_unicast(char* msj, const sockaddr_in& cli_addr) {
+	cout << "udt_send_unicast message: " << msj << " to: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << endl;
+	sendto(sockUnicast, msj, strlen(msj), 0, (struct sockaddr *) &cli_addr, sizeof (cli_addr));
+	delete [] msj;
+}
+
+void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
+	lock_guard<mutex> lock(lista_clientes_rdt_mutex);
 	// Busco el cliente
 	bool encontre_cliente = false;
 	cliente_rdt* cliente_ptr;
@@ -500,43 +558,39 @@ void maq_estados_sender(char* msj, const sockaddr_in cli_addr) {
 				cliente_ptr->estado_sender = (cliente_ptr->estado_sender + 1) % 4;
 			}
 		} else {
-			// Es un mensaje nuevo para enviar
+			// Es un mensaje nuevo
+			// Me fijo si tiene el número de seq esperado
+			if (hasSeqNum(msj[0], cliente_ptr->expected_seq_num)) {
+				// Actualizo el estado del cliente
+				cliente_ptr->expected_seq_num = !cliente_ptr->expected_seq_num;
 
+				// Lo paso a la aplicación
+				thread t1(deliver_message, &msj[1], cli_addr);
+				t1.detach();
+			}
 		}
+	} else {
+		// Cliente nuevo.
+		// Añadir el cliente a la lista
+		cliente_rdt nuevo_cliente;
+		nuevo_cliente.address = cli_addr;
+		nuevo_cliente.estado_sender = 0;
+		nuevo_cliente.expected_seq_num = 1;
+		nuevo_cliente.ult_pkt_enviado = new char[MAX_PACKET_SIZE];
+		nuevo_cliente.timer = 0;
+		nuevo_cliente.buffer_de_salida = new BoundedBuffer(1);
+		lista_clientes_rdt.push_back(nuevo_cliente);
+
+		thread t1(deliver_message, &msj[1], cli_addr);
+		t1.detach();
 	}
+
+	// En cualquier caso le contesto con un ACK y el mismo seqNum
+	thread t2(udt_send_unicast, makepkt(true, getSeqNum(msj[0]), ""), cli_addr);
+	t2.detach();
 }
 
-void maq_estados_receiver(char* msj, const sockaddr_in cli_addr) {
-	// Busco el cliente
-	bool encontre_cliente = false;
-	cliente_rdt* cliente_ptr;
-	vector<cliente_rdt>::iterator it = lista_clientes_rdt.begin();
-	while (not encontre_cliente && it != lista_clientes_rdt.end()) {
-		if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
-			*cliente_ptr = *it;
-			encontre_cliente = true;
-		}
-		it++;
-	}
-
-	if (encontre_cliente) {
-		// Me fijo si tiene el número de seq esperado
-		if (hasSeqNum(msj[0], cliente_ptr->expected_seq_num)) {
-			// Actualizo el estado del cliente
-			cliente_ptr->expected_seq_num = !cliente_ptr->expected_seq_num;
-
-			// Lo paso a la aplicación
-			thread t1(deliver_message, &msj[1], cli_addr);
-			t1.detach();
-		}
-
-		// En cualquier caso le contesto con un ACK y el mismo seqNum
-		thread t2(udt_send_unicast, makepkt(true, cliente_ptr->expected_seq_num, ""), cli_addr);
-		t2.detach();
-	}
-}
-
-void rdt_rcv() {
+void udt_rcv_unicast() {
 	char buffer[MAX_PACKET_SIZE] = {0};
 	// Para guardar la dirección del cliente
 	struct sockaddr_in si_cliente;
@@ -556,16 +610,13 @@ void rdt_rcv() {
 		// Lo termino con un fin de línea
 		pkt[strlen(temp) + 2] = 0;
 
-		if (is_ACK(pkt[0])) {
-			maq_estados_sender(pkt, si_cliente);
-		} else {
-			maq_estados_receiver(pkt, si_cliente);
-		}
+		thread t1(rdt_rcv_unicast, pkt, si_cliente);
+		t1.detach();
 	}
 }
 
-void rdt_send(char* msj, const sockaddr_in & cli_addr) {
-	// Asumo que le puedo enviar (es decir que no estoy esperando un ACK de este cliente)
+void rdt_send_unicast(char* msj, const sockaddr_in & cli_addr) {
+	lista_clientes_rdt_mutex.lock();
 	// Busco el cliente
 	bool encontre_cliente = false;
 	cliente_rdt* cliente_ptr;
@@ -581,20 +632,26 @@ void rdt_send(char* msj, const sockaddr_in & cli_addr) {
 	// Armo el paquete
 	char* pkt = makepkt(false, cliente_ptr->estado_sender / 2, msj);
 
+	// Pongo el mensaje en el buffer de salida
+	cliente_ptr->buffer_de_salida->deposit(pkt);
+
 	// Actualizo el estado del cliente
 	cliente_ptr->estado_sender = (cliente_ptr->estado_sender + 1) % 4;
-	// FIX ME!
-	cliente_ptr->ult_pkt_enviado = pkt; // debo guardarme una copia porque udt)send lo destruye
+	cliente_ptr->timer = time(NULL);
+	strcpy(cliente_ptr->ult_pkt_enviado, pkt);
+
+	lista_clientes_mutex.unlock();
+
+
 
 	// Envío
 	thread t1(udt_send_unicast, pkt, cli_addr);
 	t1.detach();
 
-	// Seteo el timer del cliente
-	cliente_ptr->timer = time(NULL);
 }
 
 void timeout_checker() {
+	lock_guard<mutex> lock(lista_clientes_rdt_mutex);
 	time_t now = time(NULL);
 	vector<cliente_rdt>::iterator it = lista_clientes_rdt.begin();
 	for (vector<cliente_rdt>::iterator it = lista_clientes_rdt.begin(); it != lista_clientes_rdt.end(); it++) {
@@ -602,7 +659,7 @@ void timeout_checker() {
 			// Re-envío
 			thread t1(udt_send_unicast, it->ult_pkt_enviado, it->address);
 			t1.detach();
-			
+
 			// Seteo el timer
 			it->timer = time(NULL);
 		}
@@ -625,19 +682,19 @@ int main(int argc, char** argv) {
 	actual = chrono::system_clock::now();
 
 	// Thread que lee desde cin
-	thread t2(leer_entrada);
-	t2.detach();
+	thread t1(leer_entrada);
+	t1.detach();
 
 	// El thread que hace ping a los clientes
-	thread t1(ping_clientes_trigger);
-	t1.detach();
+	thread t2(ping_clientes_trigger);
+	t2.detach();
 
 	// El thread que chequea si los clientes respondieron al ping
 	thread t3(update_clientes_trigger);
 	t3.detach();
 
 	// Loop escuchando en unicast
-	rdt_rcv_unicast();
+	udt_rcv_unicast();
 
 	return 0;
 }
