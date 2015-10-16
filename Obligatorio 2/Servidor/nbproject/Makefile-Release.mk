@@ -36,7 +36,8 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 # Object Files
 OBJECTFILES= \
 	${OBJECTDIR}/src/ejemplo_datagrama.o \
-	${OBJECTDIR}/src/servidor.o
+	${OBJECTDIR}/src/servidor.o \
+	${OBJECTDIR}/src/test.o
 
 
 # C Compiler Flags
@@ -72,6 +73,11 @@ ${OBJECTDIR}/src/servidor.o: src/servidor.cpp
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
 	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/servidor.o src/servidor.cpp
+
+${OBJECTDIR}/src/test.o: src/test.cpp 
+	${MKDIR} -p ${OBJECTDIR}/src
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/test.o src/test.cpp
 
 # Subprojects
 .build-subprojects:

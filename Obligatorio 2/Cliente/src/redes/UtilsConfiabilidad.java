@@ -37,7 +37,7 @@ public class UtilsConfiabilidad {
         byte header = bytes[0];
         int isAck = (int) header & 0x80; //mask 10000000
         //devuelvo true si el bit estaba prendido
-        return isAck == 1;
+        return isAck == 128;
     }
 
     public static boolean has_seq1(DatagramPacket rcvpkt) {
