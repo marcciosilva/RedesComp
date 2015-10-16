@@ -544,16 +544,18 @@ char* makepkt(bool is_ACK, bool seqNum, string msj) {
 }
 
 void udt_send_multicast(char* msj) {
-    cout << "rdt_send_multicast message: " << msj << endl;
+	char* p = &msj[1];
+    cout << "udt_send_multicast header: " << bitset<8>(msj[0]) << " y mensaje: " << p << endl << endl;
     sendto(sockMulticast, msj, strlen(msj), 0, (struct sockaddr *) &servMulticAddr, sizeof (struct sockaddr_in));
     delete [] msj;
 }
 
 void udt_send_unicast(char* msj, const sockaddr_in& cli_addr) {
-    cout << "udt_send_unicast message: " << msj << " to: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << endl;
+	char* p = &msj[1];
+    cout << "udt_send_uniicast header: " << bitset<8>(msj[0]) << " y mensaje: " << p << endl;
+	cout << "to: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << endl << endl;
     sendto(sockUnicast, msj, strlen(msj), 0, (struct sockaddr *) &cli_addr, sizeof (cli_addr));
     delete [] msj;
-    cout << "Thread udt_send_unicast finalizado" << endl;
 }
 
 void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
@@ -638,7 +640,7 @@ void udt_rcv_unicast() {
 
         // Lo termino con un fin de línea
         pkt[strlen(temp) + 1] = 0;
-		cout << "Se recibio packete con header: " << bitset<8>(pkt[0]) << endl;
+		cout << "udt_rcv_unicast header: " << bitset<8>(pkt[0]) << endl;
 		char* p = &pkt[1];
 		cout << "y data: " << p << endl << endl;
         thread t1(rdt_rcv_unicast, pkt, si_cliente);
@@ -647,9 +649,7 @@ void udt_rcv_unicast() {
 }
 
 void rdt_send_unicast(char* msj, const sockaddr_in & cli_addr) {
-    cout << "Thread rdt_send_unicast para enviar: " << msj << endl;
     //lista_clientes_rdt_mutex.lock();
-    cout << "rdt_send_unicast consiguió el lock de la lista de clientes rdt" << endl;
     // Busco el cliente
     bool encontre_cliente = false;
     cliente_rdt* cliente_ptr = 0;
@@ -673,9 +673,7 @@ void rdt_send_unicast(char* msj, const sockaddr_in & cli_addr) {
     cliente_ptr->timer = time(NULL);
     strcpy(cliente_ptr->ult_pkt_enviado, pkt);
     //lista_clientes_mutex.unlock();
-    cout << "rdt_send_unicast liberó el lock de la lista de clientes rdt" << endl;
     // Envío
-	cout << "se va a enviar" << pkt[1] << endl;
     thread t1(udt_send_unicast, pkt, cli_addr);
     t1.detach();
 }
@@ -715,12 +713,12 @@ int main(int argc, char** argv) {
     t1.detach();
 
     // El thread que hace ping a los clientes
-    thread t2(ping_clientes_trigger);
-    t2.detach();
-
-    // El thread que chequea si los clientes respondieron al ping
-    thread t3(update_clientes_trigger);
-    t3.detach();
+//    thread t2(ping_clientes_trigger);
+//    t2.detach();
+//
+//    // El thread que chequea si los clientes respondieron al ping
+//    thread t3(update_clientes_trigger);
+//    t3.detach();
 
     // Loop escuchando en unicast
     udt_rcv_unicast();
