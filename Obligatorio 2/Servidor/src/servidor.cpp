@@ -361,7 +361,6 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
         }
 
     }
-	delete [] msj;
 };
 
 //void rdt_rcv_unicast() {
