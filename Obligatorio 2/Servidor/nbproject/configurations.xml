@@ -15,7 +15,6 @@
       <logicalFolder name="src" displayName="src" projectFiles="true">
         <itemPath>src/ejemplo_datagrama.cpp</itemPath>
         <itemPath>src/servidor.cpp</itemPath>
-        <itemPath>src/test.cpp</itemPath>
       </logicalFolder>
     </logicalFolder>
     <logicalFolder name="TestFiles"
@@ -46,12 +45,10 @@
           <commandLine>-pthread -std=c++11</commandLine>
         </ccTool>
         <linkerTool>
-          <commandLine>-pthread</commandLine>
+          <commandLine>-pthread -std=c++11</commandLine>
         </linkerTool>
       </compileType>
       <item path="src/servidor.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/test.cpp" ex="false" tool="1" flavor2="0">
       </item>
     </conf>
     <conf name="Release" type="1">
@@ -77,8 +74,6 @@
       <item path="src/ejemplo_datagrama.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/servidor.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/test.cpp" ex="false" tool="1" flavor2="0">
       </item>
     </conf>
   </confs>
