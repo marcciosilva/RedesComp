@@ -87,7 +87,8 @@ public class Cliente extends javax.swing.JFrame {
             }
         });
         getContentPane().add(jTextFieldHostIP, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 40, 120, -1));
-        jTextFieldHostIP.setText("127.0.0.1");
+        //jTextFieldHostIP.setText("127.0.0.1");
+        jTextFieldHostIP.setText("25.0.32.206");
 
         jLabelPort.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         jLabelPort.setText("Port:");
