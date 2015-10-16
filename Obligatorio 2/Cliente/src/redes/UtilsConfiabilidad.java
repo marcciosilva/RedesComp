@@ -62,9 +62,7 @@ public class UtilsConfiabilidad {
         //armar paquete a enviar
         byte header = (byte) seqNum;
         if (is_ACK) {
-            header = (byte) (header & 0xff);
-        } else {
-            header = (byte) (header & 0x7f);
+            header = (byte) (header | 0x80);
         }
         byte bytes[] = {header};
         //junto el cabezal con el msj
@@ -79,9 +77,7 @@ public class UtilsConfiabilidad {
         //a seqNum
         byte header = (byte) seqNum;
         if (is_ACK) {
-            header = (byte) (header & 0xff);
-        } else {
-            header = (byte) (header & 0x7f);
+            header = (byte) (header | 0x80);
         }
         byte bytes[] = {header};
         return new DatagramPacket(bytes, bytes.length);
@@ -92,9 +88,7 @@ public class UtilsConfiabilidad {
         //a seqNum
         byte header = (byte) seqNum;
         if (is_ACK) {
-            header = (byte) (header & 0xff);
-        } else {
-            header = (byte) (header & 0x7f);
+            header = (byte) (header | 0x80);
         }
         byte bytes[] = {header};
         return new DatagramPacket(bytes, bytes.length, address, port);

@@ -79,6 +79,7 @@ public class EnvioUnicast extends Thread {
             }
         } else {
             while (!interrumpido) {
+                System.out.println("Entro al loop de rdt_send para enviar: " + msj);
                 if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_DATA_0) {
                     try {
                         byte[] data = msj.getBytes();
