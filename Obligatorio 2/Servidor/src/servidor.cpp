@@ -125,7 +125,7 @@ vector<cliente_rdt> lista_clientes_rdt;
 
 void rdt_send_unicast(char* msj, const sockaddr_in& cli_addr);
 
-void rdt_send_multicast(char* msj);
+void udt_send_multicast(char* msj);
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% APLICACIÓN %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% //
 
@@ -181,7 +181,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 			char *aviso_ptr = new char[aviso.length() + 1];
 			*aviso_ptr = 0;
 			strcpy(aviso_ptr, aviso.c_str());
-			thread t2(rdt_send_multicast, aviso_ptr);
+			thread t2(udt_send_multicast, aviso_ptr);
 			t2.detach();
 
 			cantClientes++;
@@ -216,7 +216,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		char *aviso_ptr = new char[aviso.length() + 1];
 		*aviso_ptr = 0;
 		strcpy(aviso_ptr, aviso.c_str());
-		thread t2(rdt_send_multicast, aviso_ptr);
+		thread t2(udt_send_multicast, aviso_ptr);
 		t2.detach();
 
 		cantClientes--;
@@ -276,7 +276,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		strcat(resp_ptr, mensaje);
 
 		// Envío
-		thread t1(rdt_send_multicast, resp_ptr);
+		thread t1(udt_send_multicast, resp_ptr);
 		t1.detach();
 		cantMensajes++;
 
@@ -445,7 +445,7 @@ void update_clientes() {
 			char *aviso_ptr = new char[aviso.length() + 1];
 			*aviso_ptr = 0;
 			strcpy(aviso_ptr, aviso.c_str());
-			thread t2(rdt_send_multicast, aviso_ptr);
+			thread t2(udt_send_multicast, aviso_ptr);
 			t2.detach();
 			it = lista_clientes.erase(it);
 
