@@ -1,6 +1,7 @@
 package redes;
 
 import java.net.DatagramPacket;
+import java.net.InetAddress;
 import java.util.Arrays;
 
 /**
@@ -72,7 +73,7 @@ public class UtilsConfiabilidad {
         return new DatagramPacket(pktbytes, pktbytes.length, paquete.getAddress(), paquete.getPort());
     }
 
-    public static DatagramPacket makepkt(boolean is_ACK, int seqNum) {
+    public static DatagramPacket makepkt_multicast(boolean is_ACK, int seqNum) {
         //armar paquete de acknowledge con numero de secuencia igual
         //a seqNum
         byte header = (byte) seqNum;
@@ -83,6 +84,19 @@ public class UtilsConfiabilidad {
         }
         byte bytes[] = {header};
         return new DatagramPacket(bytes, bytes.length);
+    }
+
+    public static DatagramPacket makepkt(boolean is_ACK, int seqNum, InetAddress address, int port) {
+        //armar paquete de acknowledge con numero de secuencia igual
+        //a seqNum
+        byte header = (byte) seqNum;
+        if (is_ACK) {
+            header = (byte) (header & 0xff);
+        } else {
+            header = (byte) (header & 0x7f);
+        }
+        byte bytes[] = {header};
+        return new DatagramPacket(bytes, bytes.length, address, port);
     }
 
 }
