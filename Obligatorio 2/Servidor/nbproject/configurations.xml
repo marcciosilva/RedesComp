@@ -49,6 +49,8 @@
           <commandLine>-pthread</commandLine>
         </linkerTool>
       </compileType>
+      <item path="src/servidor.cpp" ex="false" tool="1" flavor2="0">
+      </item>
       <item path="src/test.cpp" ex="false" tool="1" flavor2="0">
       </item>
     </conf>

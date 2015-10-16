@@ -39,24 +39,6 @@ struct cliente {
 mutex lista_clientes_mutex;
 vector<cliente> lista_clientes;
 
-// Variables del socket multicast
-int sockMulticast;
-struct in_addr iaddr;
-struct sockaddr_in servMulticAddr, servMulticInterface, multic_cliaddr;
-unsigned char ttl = 5;
-unsigned char one = 1;
-
-// Variables del socket unicast
-int sockUnicast;
-struct sockaddr_in servUnicAddr, unic_cliaddr;
-
-//Variables para interface
-int cantClientes = 0;
-int cantMensajes = 0;
-int cantConexiones = 0;
-std::chrono::duration<double> wallTime;
-chrono::system_clock::time_point actual;
-
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Buffer %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% //
 
 struct BoundedBuffer {
@@ -121,6 +103,24 @@ struct cliente_rdt {
 mutex lista_clientes_rdt_mutex;
 vector<cliente_rdt> lista_clientes_rdt;
 
+// Variables del socket multicast
+int sockMulticast;
+struct in_addr iaddr;
+struct sockaddr_in servMulticAddr, servMulticInterface, multic_cliaddr;
+unsigned char ttl = 5;
+unsigned char one = 1;
+
+// Variables del socket unicast
+int sockUnicast;
+struct sockaddr_in servUnicAddr, unic_cliaddr;
+
+//Variables para interface
+int cantClientes = 0;
+int cantMensajes = 0;
+int cantConexiones = 0;
+std::chrono::duration<double> wallTime;
+chrono::system_clock::time_point actual;
+
 // %%%%%%%%%%%%%%%%%%%% Forward Declarations %%%%%%%%%%%%%%%%%%%%%% //
 
 void rdt_send_unicast(char* msj, const sockaddr_in& cli_addr);
@@ -166,7 +166,6 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
             char *resp_ptr = new char[resp.length() + 1];
             *resp_ptr = 0;
             strcpy(resp_ptr, resp.c_str());
-            cout << "Respuesta a enviar (sin cabezal rdt): " << resp_ptr << endl;
             thread t1(rdt_send_unicast, resp_ptr, cli_addr);
             t1.detach();
 
@@ -431,7 +430,13 @@ void ping_clientes_trigger() {
 }
 
 void update_clientes() {
-    lock_guard<mutex> lock(lista_clientes_mutex);
+    /*
+     * tengo que pedir acceso a los dos mutex porque si tengo que sacar a un
+     * cliente, voy a tener que sacarlo de las dos listas, la de rdt y la
+     * común
+     */
+    lock_guard<mutex> lock(lista_clientes_rdt_mutex);
+    lock_guard<mutex> lock2(lista_clientes_mutex);
     time_t now = time(NULL);
     for (vector<cliente>::iterator it = lista_clientes.begin(); it != lista_clientes.end();) {
         //si no lo vi por mas de 5 seg
@@ -449,6 +454,18 @@ void update_clientes() {
             thread t2(udt_send_multicast, aviso_ptr);
             t2.detach();
             it = lista_clientes.erase(it);
+
+            //lo busco y elimino en lista_clientes_rdt
+            for (vector<cliente_rdt>::iterator it2 = lista_clientes_rdt.begin();
+                    it2 != lista_clientes_rdt.end();) {
+                if (it->address.sin_addr.s_addr == it2->address.sin_addr.s_addr
+                        && it->address.sin_port == it2->address.sin_port) {
+                    lista_clientes_rdt.erase(it2);
+                    break;
+                } else {
+                    it2++;
+                }
+            }
 
             cantClientes--;
         } else {
@@ -533,6 +550,7 @@ void udt_send_unicast(char* msj, const sockaddr_in& cli_addr) {
     cout << "udt_send_unicast message: " << msj << " to: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << endl;
     sendto(sockUnicast, msj, strlen(msj), 0, (struct sockaddr *) &cli_addr, sizeof (cli_addr));
     delete [] msj;
+    cout << "Thread udt_send_unicast finalizado" << endl;
 }
 
 void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
@@ -623,19 +641,21 @@ void udt_rcv_unicast() {
 }
 
 void rdt_send_unicast(char* msj, const sockaddr_in & cli_addr) {
+    cout << "Thread rdt_send_unicast para enviar: " << msj << endl;
     lista_clientes_rdt_mutex.lock();
+    cout << "rdt_send_unicast consiguió el lock de la lista de clientes rdt" << endl;
     // Busco el cliente
     bool encontre_cliente = false;
-    cliente_rdt* cliente_ptr;
+    cliente_rdt* cliente_ptr = 0;
     vector<cliente_rdt>::iterator it = lista_clientes_rdt.begin();
     while (not encontre_cliente && it != lista_clientes_rdt.end()) {
         if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
-            *cliente_ptr = *it;
+            cliente_ptr = &(*it);
             encontre_cliente = true;
+        } else {
+            it++;
         }
-        it++;
     }
-
     // Armo el paquete
     char* pkt = makepkt(false, cliente_ptr->estado_sender / 2, msj);
 
@@ -646,14 +666,11 @@ void rdt_send_unicast(char* msj, const sockaddr_in & cli_addr) {
     cliente_ptr->estado_sender = (cliente_ptr->estado_sender + 1) % 4;
     cliente_ptr->timer = time(NULL);
     strcpy(cliente_ptr->ult_pkt_enviado, pkt);
-
-
+    lista_clientes_mutex.unlock();
+    cout << "rdt_send_unicast liberó el lock de la lista de clientes rdt" << endl;
     // Envío
     thread t1(udt_send_unicast, pkt, cli_addr);
-    //    t1.detach();
-    t1.join();
-
-    lista_clientes_mutex.unlock();
+    t1.detach();
 }
 
 void timeout_checker() {
