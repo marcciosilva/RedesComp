@@ -727,6 +727,43 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 	}
 }
 
+void rdt_rcv_multicast(char* msj, sockaddr_in cli_addr) {
+	// Falta (mirar el rdt_rcv_unicast para una guía)
+	// Acá se tiene que actualizar la lista con el ack recibido
+	// y fijarse si ya todos respondieron.
+	// Si todos respondieron poner el timer a 0 y
+	// actualizar el seqNum_multicast = !seqNum_multicast
+	// y no se qué más
+}
+
+void udt_rcv_multicast() {
+	char buffer[MAX_PACKET_SIZE] = {0};
+	// Para guardar la dirección del cliente
+	struct sockaddr_in si_cliente;
+	int slen = sizeof (si_cliente);
+
+	while (true) {
+		// FALTA algo como un recvfrom()
+		
+		// Obtengo un puntero al comienzo del mensaje
+		char* temp = &buffer[1];
+		char* pkt = new char[strlen(temp) + 2];
+
+		// Escribo el mensaje
+		for (int i = 0; i < strlen(temp) + 1; i++) {
+			pkt[i] = buffer[i];
+		};
+
+		// Lo termino con un fin de línea
+		pkt[strlen(temp) + 1] = 0;
+		cout << "udt_rcv_multicast header: " << bitset<8>(pkt[0]) << endl;
+		char* p = &pkt[1];
+		cout << "y data: " << p << endl << endl;
+		thread t1(rdt_rcv_multicast, pkt, si_cliente);
+		t1.detach();
+	}
+}
+
 void udt_rcv_unicast() {
 	char buffer[MAX_PACKET_SIZE] = {0};
 	// Para guardar la dirección del cliente
