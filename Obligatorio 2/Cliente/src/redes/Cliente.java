@@ -8,6 +8,7 @@ import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
@@ -87,8 +88,8 @@ public class Cliente extends javax.swing.JFrame {
             }
         });
         getContentPane().add(jTextFieldHostIP, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 40, 120, -1));
-        //jTextFieldHostIP.setText("127.0.0.1");
-        jTextFieldHostIP.setText("25.0.32.206");
+        jTextFieldHostIP.setText("127.0.0.1");
+        //jTextFieldHostIP.setText("25.0.32.206");
 
         jLabelPort.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         jLabelPort.setText("Port:");
@@ -491,13 +492,6 @@ public class Cliente extends javax.swing.JFrame {
 
     public void envioFinalizado() {
         System.out.println("Envío finalizado correctamente");
-        //uso el interrumpir sólo para este thread porque
-        //no quiero cerrar el socketUnicast y generar uno nuevo para
-        //el siguiente thread de unicast que pueda generar
-        if (threadEnvioUnicastActual.isAlive()) {
-            threadEnvioUnicastActual.interrupt();
-            threadEnvioUnicastActual = null;
-        }
         //cambio estado de la máquina del sender
         if (estadoSender == EstadoSender.ESPERO_ACK_0) {
             estadoSender = EstadoSender.ESPERO_DATA_1;
@@ -530,6 +524,9 @@ public class Cliente extends javax.swing.JFrame {
         Cliente v = Cliente.getInstance();
         v.setLocationRelativeTo(null);
         v.setVisible(true);
+		
+		timeoutChecker = new Timeout_checker();
+        timeoutChecker.start();
     }
 
     EnvioUnicast threadEnvioUnicastActual;
@@ -539,16 +536,19 @@ public class Cliente extends javax.swing.JFrame {
 
         ESPERO_DATA_0, ESPERO_ACK_0, ESPERO_DATA_1, ESPERO_ACK_1
     }
-    public EstadoSender estadoSender = EstadoSender.ESPERO_DATA_0;
+    public static EstadoSender estadoSender = EstadoSender.ESPERO_DATA_0;
 
-    private int multicastPort = 6789;
+    public static int multicastPort = 6789;
     private InetAddress multicastIP;
     private String strMulticastIP = "225.5.4.3";
     public final static int PACKETSIZE = 65507;
+	public static Date tiempo_enviado = null;
+	public static String ultimo_msj;
+	public static boolean espero_ack = false;
     // El puerto donde corre el servidor. Se lee desde la interfaz
     private int serverPort;
     // La IP donde corre el servidor. Se lee desde la interfaz
-    private InetAddress serverIP;
+    public static InetAddress serverIP;
     public MulticastSocket socketMulticast;
     // El socket para recibir y enviar mansajes unicast.
     public DatagramSocket socketUnicast;
@@ -559,6 +559,7 @@ public class Cliente extends javax.swing.JFrame {
     private boolean aplicarConfiabilidad = true;
     private LectorMulticast multicastThread;
     private LectorUnicast listenerUnicast;
+    private static Timeout_checker timeoutChecker;
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.ButtonGroup buttonGroup1;
     private javax.swing.JRadioButton buttonPrivado;
