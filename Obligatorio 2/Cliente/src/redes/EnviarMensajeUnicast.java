@@ -5,21 +5,29 @@
  */
 package redes;
 
+import java.util.concurrent.BlockingQueue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
  *
  * @author marccio
  */
 class EnviarMensajeUnicast extends Thread {
 
-    private BufferMensajesEnviar buffer;
-    private String msj;
+	private BlockingQueue buffer;
+	private String msj;
 
-    public EnviarMensajeUnicast(BufferMensajesEnviar b, String msj) {
-        buffer = b;
-        this.msj = msj;
-    }
+	public EnviarMensajeUnicast(BlockingQueue b, String msj) {
+		buffer = b;
+		this.msj = msj;
+	}
 
-    public void run() {
-        buffer.put(msj);
-    }
+	public void run() {
+		try {
+			buffer.put(msj);
+		} catch (InterruptedException ex) {
+			Logger.getLogger(EnviarMensajeUnicast.class.getName()).log(Level.SEVERE, null, ex);
+		}
+	}
 }

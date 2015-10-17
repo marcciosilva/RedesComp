@@ -10,6 +10,8 @@ import java.net.MulticastSocket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Date;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
@@ -41,7 +43,7 @@ public class Cliente extends javax.swing.JFrame {
 		initComponents();
 		// Botón 'Enviar' como predeterminado al apretar 'Enter'
 		getRootPane().setDefaultButton(jButtonEnviar);
-		bufferEnvio = new BufferMensajesEnviar();
+		bufferEnvio = new LinkedBlockingQueue(1);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -323,10 +325,7 @@ public class Cliente extends javax.swing.JFrame {
     }//GEN-LAST:event_jTextFieldHostIPActionPerformed
 
 	private void enviarMensaje(String msj) {
-//		deshabilitarEnvios();
-		bufferEnvio.put(msj);
-//		threadEnvioUnicast = new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort);
-//		threadEnvioUnicast.start();
+		(new EnviarMensajeUnicast(bufferEnvio, msj)).start();
 	}
 
 	private boolean okIP(String ip) {
@@ -527,7 +526,8 @@ public class Cliente extends javax.swing.JFrame {
 		timeoutChecker.start();
 	}
 
-	BufferMensajesEnviar bufferEnvio;
+	BlockingQueue<String> bufferEnvio;
+//	BufferMensajesEnviar bufferEnvio;
 	EnvioUnicast threadEnvioUnicast;
 
 	//Máquina de estados del emisor

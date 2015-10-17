@@ -6,6 +6,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.time.Instant;
 import java.util.Date;
+import java.util.concurrent.BlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -28,7 +29,7 @@ public class EnvioUnicast extends Thread {
 	public final static int TIMEOUT = 5000;
 	public final static int PACKETSIZE = 65536;
 	protected DatagramSocket socketUnicast;
-	BufferMensajesEnviar buffer;
+	BlockingQueue<String> buffer;
 
 	/**
 	 * Se construye el thread con el mensaje a enviar y la información del
@@ -39,7 +40,7 @@ public class EnvioUnicast extends Thread {
 	 * @param b
 	 * @param serverPort Puerto donde escucha el servidor
 	 */
-	public EnvioUnicast(boolean confiabilidad, InetAddress serverIP, int serverPort, BufferMensajesEnviar b) {
+	public EnvioUnicast(boolean confiabilidad, InetAddress serverIP, int serverPort, BlockingQueue b) {
 		this.buffer = b;
 		this.confiabilidad = confiabilidad;
 		this.serverIP = serverIP;
@@ -50,7 +51,7 @@ public class EnvioUnicast extends Thread {
 	public void run() {
 		while (true) {
 			try {
-				msj = buffer.get();
+				msj = buffer.take();
 				socketUnicast = cliente.getUnicastSocket();
 				Cliente.cant_mensajes++;
 				System.out.println("Mensaje nro: " + Cliente.cant_mensajes);
