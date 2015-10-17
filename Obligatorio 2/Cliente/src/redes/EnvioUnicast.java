@@ -112,19 +112,18 @@ public class EnvioUnicast extends Thread {
 //                        socketUnicast = null;
                         Logger.getLogger(EnvioUnicast.class.getName()).log(Level.SEVERE, null, ex);
                     }
-                    if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_ACK_0
-                            || cliente.estadoSender == Cliente.EstadoSender.ESPERO_ACK_1) {
+                } else if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_ACK_0
+                        || cliente.estadoSender == Cliente.EstadoSender.ESPERO_ACK_1) {
                         //si saltó el timer entro por acá, sea que espere ACK0 o ACK1
-                        //reenvíos
-                        socketUnicast.send(out_pck);
-                        synchronized (this) {
-                            try {
-                                wait(TIMEOUT);
-                            } catch (InterruptedException ex) {
-                                interrumpido = true;
+                    //reenvíos
+                    socketUnicast.send(out_pck);
+                    synchronized (this) {
+                        try {
+                            wait(TIMEOUT);
+                        } catch (InterruptedException ex) {
+                            interrumpido = true;
 //                                socketUnicast = null;
-                                Logger.getLogger(EnvioUnicast.class.getName()).log(Level.SEVERE, null, ex);
-                            }
+                            Logger.getLogger(EnvioUnicast.class.getName()).log(Level.SEVERE, null, ex);
                         }
                     }
                 }
