@@ -528,8 +528,8 @@ public class Cliente extends javax.swing.JFrame {
         Cliente v = Cliente.getInstance();
         v.setLocationRelativeTo(null);
         v.setVisible(true);
-		
-		timeoutChecker = new Timeout_checker();
+
+        timeoutChecker = new Timeout_checker();
         timeoutChecker.start();
     }
 
@@ -542,14 +542,14 @@ public class Cliente extends javax.swing.JFrame {
     }
     public static EstadoSender estadoSender = EstadoSender.ESPERO_DATA_0;
 
-	public static int cant_mensajes = 0;
+    public static int cant_mensajes = 0;
     public static int multicastPort = 6789;
     private InetAddress multicastIP;
-    private String strMulticastIP = "225.5.4.3";
+    public static String strMulticastIP = "225.5.4.3";
     public final static int PACKETSIZE = 65507;
-	public static Date tiempo_enviado = null;
-	public static DatagramPacket ultimo_pkt;
-	public static boolean espero_ack = false;
+    public static Date tiempo_enviado = null;
+    public static DatagramPacket ultimo_pkt;
+    public static boolean espero_ack = false;
     // El puerto donde corre el servidor. Se lee desde la interfaz
     public static int serverPort;
     // La IP donde corre el servidor. Se lee desde la interfaz
