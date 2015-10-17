@@ -43,7 +43,7 @@ public class Cliente extends javax.swing.JFrame {
 		initComponents();
 		// Botón 'Enviar' como predeterminado al apretar 'Enter'
 		getRootPane().setDefaultButton(jButtonEnviar);
-		bufferEnvio = new LinkedBlockingQueue(1);
+		bufferEnvio = new LinkedBlockingQueue(50);
 	}
 
 	@SuppressWarnings("unchecked")

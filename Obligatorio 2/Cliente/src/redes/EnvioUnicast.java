@@ -52,6 +52,7 @@ public class EnvioUnicast extends Thread {
 		while (true) {
 			try {
 				msj = buffer.take();
+				System.out.println("Take -> Items en cola: " + String.valueOf(buffer.size()));
 				socketUnicast = cliente.getUnicastSocket();
 				Cliente.cant_mensajes++;
 				System.out.println("Mensaje nro: " + Cliente.cant_mensajes);
@@ -59,9 +60,7 @@ public class EnvioUnicast extends Thread {
 				synchronized (this) {
 					wait();
 				}
-			} catch (IOException ex) {
-				Logger.getLogger(EnvioUnicast.class.getName()).log(Level.SEVERE, null, ex);
-			} catch (InterruptedException ex) {
+			} catch (IOException | InterruptedException ex) {
 				Logger.getLogger(EnvioUnicast.class.getName()).log(Level.SEVERE, null, ex);
 			}
 		}
@@ -89,7 +88,6 @@ public class EnvioUnicast extends Thread {
 			System.out.println("Entro al loop de rdt_send para enviar: " + msj);
 			if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_DATA_0) {
 				byte[] data = msj.getBytes();
-				DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
 				out_pck = UtilsConfiabilidad.makepkt(false, 0, data, serverIP, serverPort);
 				Cliente.ultimo_pkt = out_pck;
 				cliente.estadoSender = Cliente.EstadoSender.ESPERO_ACK_0;
@@ -102,7 +100,6 @@ public class EnvioUnicast extends Thread {
 
 			} else if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_DATA_1) {
 				byte[] data = msj.getBytes();
-				DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
 				out_pck = UtilsConfiabilidad.makepkt(false, 1, data, serverIP, serverPort);
 				Cliente.ultimo_pkt = out_pck;
 				cliente.estadoSender = Cliente.EstadoSender.ESPERO_ACK_1;
@@ -115,5 +112,6 @@ public class EnvioUnicast extends Thread {
 
 			}
 		}
+		System.out.println("rdt_send finalizado");
 	}
 }
