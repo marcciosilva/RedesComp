@@ -207,7 +207,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
         vector<cliente>::iterator it = lista_clientes.begin();
         while (not encontre && it != lista_clientes.end()) {
             if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
-                remitente = it->nick;
+                strcpy(remitente, it->nick);
                 lista_clientes.erase(it);
                 encontre = true;
             }
