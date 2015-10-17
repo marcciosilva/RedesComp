@@ -70,7 +70,7 @@ public class LectorMulticast extends Thread {
                 String msj = UtilsConfiabilidad.extract(rcvpkt);
                 UtilsConfiabilidad.deliver_msj(msj);
                 //me llega lo que estoy esperando del servidor
-                out_pck = UtilsConfiabilidad.makepkt(true, 0, multicastAddress, puerto);
+                out_pck = UtilsConfiabilidad.makepkt(true, 0, null, multicastAddress, puerto);
                 //broadcasteo el acknowledge
                 //si le llega a otro usuario, simplemente lo ignora
                 socketMulticastEnvio.send(out_pck);
@@ -87,7 +87,7 @@ public class LectorMulticast extends Thread {
                 try {
                     String msj = UtilsConfiabilidad.extract(rcvpkt);
                     UtilsConfiabilidad.deliver_msj(msj);
-                    out_pck = UtilsConfiabilidad.makepkt(true, 1, multicastAddress, puerto);
+                    out_pck = UtilsConfiabilidad.makepkt(true, 1, null, multicastAddress, puerto);
                     socketMulticastEnvio.send(out_pck);
                     estado = Estado.ESPERO_0;
                 } catch (IOException ex) {

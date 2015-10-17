@@ -64,21 +64,19 @@ public class UtilsConfiabilidad {
         return seqNum == 0;
     }
 
-    public static DatagramPacket makeDatapkt(boolean is_ACK, int seqNum, DatagramPacket paquete) {
-        //armar paquete a enviar
-        byte header = (byte) seqNum;
-        if (is_ACK) {
-            header = (byte) (header | 0x80);
-        }
-        byte bytes[] = {header};
-        //junto el cabezal con el msj
-        byte[] pktbytes = new byte[bytes.length + paquete.getData().length];
-        System.arraycopy(bytes, 0, pktbytes, 0, bytes.length);
-        System.arraycopy(paquete.getData(), 0, pktbytes, bytes.length, paquete.getData().length);
-        return new DatagramPacket(pktbytes, pktbytes.length, paquete.getAddress(), paquete.getPort());
-    }
-
-    public static DatagramPacket makepkt(boolean is_ACK, int seqNum, InetAddress address, int port) {
+    /**
+     * Crea un paquete para enviar; técnicamente se podría hacer un ACK con
+     * payload pero sólo usamos o un ACK o un mensaje con payload
+     *
+     * @param is_ACK True si el paquete va a ser un ACK
+     * @param seqNum Número de secuencia
+     * @param data Payload del paquete (si es null, el paquete puede ser sólo un
+     * ACK)
+     * @param address Dirección IP de destino
+     * @param port Puero de destino
+     * @return Devuelve el paquete creado
+     */
+    public static DatagramPacket makepkt(boolean is_ACK, int seqNum, byte[] data, InetAddress address, int port) {
         //armar paquete de acknowledge con numero de secuencia igual
         //a seqNum
         byte header = (byte) seqNum;
@@ -86,7 +84,16 @@ public class UtilsConfiabilidad {
             header = (byte) (header | 0x80);
         }
         byte bytes[] = {header};
-        return new DatagramPacket(bytes, bytes.length, address, port);
+
+        if (data != null) {
+            byte[] pktbytes = new byte[bytes.length + data.length];
+            System.arraycopy(bytes, 0, pktbytes, 0, bytes.length);
+            System.arraycopy(data, 0, pktbytes, bytes.length, data.length);
+            return new DatagramPacket(pktbytes, pktbytes.length, address, port);
+        } else {
+            return new DatagramPacket(bytes, bytes.length, address, port);
+        }
+
     }
 
 }
