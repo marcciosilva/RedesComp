@@ -18,7 +18,7 @@ public class Timeout_checker extends Thread {
 					System.out.println("### reenvío ###");
 					Cliente.socketUnicast.send(Cliente.ultimo_pkt);
 				}
-				Thread.sleep(200); // 500ms
+				Thread.sleep(250); // 500ms
 			} catch (InterruptedException | IOException ex) {
 				Logger.getLogger(Timeout_checker.class.getName()).log(Level.SEVERE, null, ex);
 			}
