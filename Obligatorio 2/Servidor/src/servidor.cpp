@@ -284,17 +284,17 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
         t1.detach();
         cantMensajes++;
 
-		// Testing solamente(solo cambiar la ip)
-		sockaddr_in cliente_over_hamachi;
-		cliente_over_hamachi.sin_family = PF_INET;
-		cliente_over_hamachi.sin_addr.s_addr = inet_addr("25.105.117.246");
-		cliente_over_hamachi.sin_port = htons(6789);
-		char * resp_ptr2 = new char[MAX_MESSAGE_LENGHT];
-		*resp_ptr2 = 0;
-		strcpy(resp_ptr2, resp.c_str());
-		strcat(resp_ptr2, mensaje);
-		thread t2(rdt_send_unicast, resp_ptr2, cliente_over_hamachi);
-		t2.detach();
+        // Testing solamente(solo cambiar la ip)
+        sockaddr_in cliente_over_hamachi;
+        cliente_over_hamachi.sin_family = PF_INET;
+        cliente_over_hamachi.sin_addr.s_addr = inet_addr("25.105.117.246");
+        cliente_over_hamachi.sin_port = htons(6789);
+        char * resp_ptr2 = new char[MAX_MESSAGE_LENGHT];
+        *resp_ptr2 = 0;
+        strcpy(resp_ptr2, resp.c_str());
+        strcat(resp_ptr2, mensaje);
+        thread t2(rdt_send_unicast, resp_ptr2, cliente_over_hamachi);
+        t2.detach();
 
     } else if (strcmp(comando, "PRIVATE_MESSAGE") == 0) {
         // Enviar por unicast el mensaje
@@ -564,7 +564,7 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
     vector<cliente_rdt>::iterator it = lista_clientes_rdt.begin();
     while (not encontre_cliente && it != lista_clientes_rdt.end()) {
         if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
-            *cliente_ptr = *it;
+            cliente_ptr = &(*it);
             encontre_cliente = true;
         }
         it++;
@@ -638,9 +638,9 @@ void udt_rcv_unicast() {
 
         // Lo termino con un fin de línea
         pkt[strlen(temp) + 1] = 0;
-		cout << "Se recibio packete con header: " << bitset<8>(pkt[0]) << endl;
-		char* p = &pkt[1];
-		cout << "y data: " << p << endl << endl;
+        cout << "Se recibio packete con header: " << bitset<8>(pkt[0]) << endl;
+        char* p = &pkt[1];
+        cout << "y data: " << p << endl << endl;
         thread t1(rdt_rcv_unicast, pkt, si_cliente);
         t1.detach();
     }
@@ -675,7 +675,7 @@ void rdt_send_unicast(char* msj, const sockaddr_in & cli_addr) {
     //lista_clientes_mutex.unlock();
     cout << "rdt_send_unicast liberó el lock de la lista de clientes rdt" << endl;
     // Envío
-	cout << "se va a enviar" << pkt[1] << endl;
+    cout << "se va a enviar" << pkt[1] << endl;
     thread t1(udt_send_unicast, pkt, cli_addr);
     t1.detach();
 }
