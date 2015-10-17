@@ -50,18 +50,32 @@ public class EnvioUnicast extends Thread {
 	@Override
 	public void run() {
 		while (true) {
-			try {
-				msj = buffer.take();
-				System.out.println("Take -> Items en cola: " + String.valueOf(buffer.size()));
-				socketUnicast = cliente.getUnicastSocket();
-				Cliente.cant_mensajes++;
-				System.out.println("Mensaje nro: " + Cliente.cant_mensajes);
-				rdt_send(msj);
-				synchronized (this) {
-					wait();
+			System.out.println("EnvioUnicast : A punto de tomar del buffer...");
+			synchronized (buffer) {
+				msj = buffer.poll();
+			}
+			if (msj != null) {
+				try {
+					System.out.println("EnvioUnicast : Take -> Items en cola: " + String.valueOf(buffer.size()));
+					socketUnicast = cliente.getUnicastSocket();
+					Cliente.cant_mensajes++;
+					System.out.println("EnvioUnicast : Mensaje nro: " + Cliente.cant_mensajes);
+					rdt_send(msj);
+					synchronized (this) {
+						wait();
+						System.out.println("EnvioUnicast: Despertado por notify");
+					}
+				} catch (IOException | InterruptedException ex) {
+					Logger.getLogger(EnvioUnicast.class.getName()).log(Level.SEVERE, null, ex);
 				}
-			} catch (IOException | InterruptedException ex) {
-				Logger.getLogger(EnvioUnicast.class.getName()).log(Level.SEVERE, null, ex);
+			} else {
+				synchronized (this) {
+					try {
+						wait(100);
+					} catch (InterruptedException ex) {
+						Logger.getLogger(EnvioUnicast.class.getName()).log(Level.SEVERE, null, ex);
+					}
+				}
 			}
 		}
 	}
@@ -85,33 +99,34 @@ public class EnvioUnicast extends Thread {
 				System.err.println(ex.toString());
 			}
 		} else {
-			System.out.println("Entro al loop de rdt_send para enviar: " + msj);
-			if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_DATA_0) {
-				byte[] data = msj.getBytes();
-				out_pck = UtilsConfiabilidad.makepkt(false, 0, data, serverIP, serverPort);
-				Cliente.ultimo_pkt = out_pck;
-				cliente.estadoSender = Cliente.EstadoSender.ESPERO_ACK_0;
-				if (!(Cliente.cant_mensajes > 1 && (Cliente.cant_mensajes % 4 == 0))) {
-					socketUnicast.send(out_pck);
-				} else {
-					System.out.println("777777 Skipped 7777777");
-				}
-				Cliente.tiempo_enviado = Date.from(Instant.now());
+			System.out.println("EnvioUnicast : Entro al loop de rdt_send para enviar: " + msj);
+			synchronized (cliente.estadoSender) {
+				if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_DATA_0) {
+					byte[] data = msj.getBytes();
+					out_pck = UtilsConfiabilidad.makepkt(false, 0, data, serverIP, serverPort);
+					Cliente.ultimo_pkt = out_pck;
+					cliente.estadoSender = Cliente.EstadoSender.ESPERO_ACK_0;
+					if (!(Cliente.cant_mensajes > 1 && (Cliente.cant_mensajes % 4 == 0))) {
+						socketUnicast.send(out_pck);
+					} else {
+						System.out.println("EnvioUnicast : 777777 Skipped 7777777");
+					}
+					Cliente.tiempo_enviado = Date.from(Instant.now());
 
-			} else if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_DATA_1) {
-				byte[] data = msj.getBytes();
-				out_pck = UtilsConfiabilidad.makepkt(false, 1, data, serverIP, serverPort);
-				Cliente.ultimo_pkt = out_pck;
-				cliente.estadoSender = Cliente.EstadoSender.ESPERO_ACK_1;
-				if (!(Cliente.cant_mensajes > 1 && (Cliente.cant_mensajes % 4 == 0))) {
-					socketUnicast.send(out_pck);
-				} else {
-					System.out.println("777777 Skipped 7777777");
+				} else if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_DATA_1) {
+					byte[] data = msj.getBytes();
+					out_pck = UtilsConfiabilidad.makepkt(false, 1, data, serverIP, serverPort);
+					Cliente.ultimo_pkt = out_pck;
+					cliente.estadoSender = Cliente.EstadoSender.ESPERO_ACK_1;
+					if (!(Cliente.cant_mensajes > 1 && (Cliente.cant_mensajes % 4 == 0))) {
+						socketUnicast.send(out_pck);
+					} else {
+						System.out.println("EnvioUnicast : 777777 Skipped 7777777");
+					}
+					Cliente.tiempo_enviado = Date.from(Instant.now());
 				}
-				Cliente.tiempo_enviado = Date.from(Instant.now());
-
 			}
 		}
-		System.out.println("rdt_send finalizado");
+		System.out.println("EnvioUnicast : rdt_send finalizado");
 	}
 }

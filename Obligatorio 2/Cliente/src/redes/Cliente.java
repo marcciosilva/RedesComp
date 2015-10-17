@@ -381,6 +381,11 @@ public class Cliente extends javax.swing.JFrame {
 	public void comunicarAlive() {
 		//hay que enviar un IS_ALIVE al server por unicast
 		String msj = "IS_ALIVE\0";
+		if (threadEnvioUnicast.isAlive()) {
+			System.out.println("El threadEnvioUnicast está vivo");
+		} else {
+			System.out.println("El threadEnvioUnicast NOO está vivo");
+		}
 		enviarMensaje(msj);
 	}
 

@@ -25,7 +25,10 @@ class EnviarMensajeUnicast extends Thread {
 
 	public void run() {
 		try {
-			buffer.put(msj);
+			synchronized (buffer) {
+				//si eventualmente se llenara el buffer habría que hacer algún chequeo adicional, porque puede trancarlo
+				buffer.put(msj);
+			}
 			System.out.println("Put -> Items en cola: " + String.valueOf(buffer.size()));
 		} catch (InterruptedException ex) {
 			Logger.getLogger(EnviarMensajeUnicast.class.getName()).log(Level.SEVERE, null, ex);
