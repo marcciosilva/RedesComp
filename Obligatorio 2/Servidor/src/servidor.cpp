@@ -100,7 +100,7 @@ struct cliente_rdt {
     int estado_sender; // De 0 a 3
     bool expected_seq_num; // el seq num que espero recibir del cliente
     char* ult_pkt_enviado;
-    BoundedBuffer* buffer_de_salida;
+    //BoundedBuffer* buffer_de_salida;
 };
 
 mutex lista_clientes_rdt_mutex;
@@ -285,16 +285,16 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
         cantMensajes++;
 
 		// Testing solamente(solo cambiar la ip)
-		sockaddr_in cliente_over_hamachi;
-		cliente_over_hamachi.sin_family = PF_INET;
-		cliente_over_hamachi.sin_addr.s_addr = inet_addr("25.105.117.246");
-		cliente_over_hamachi.sin_port = htons(6789);
-		char * resp_ptr2 = new char[MAX_MESSAGE_LENGHT];
-		*resp_ptr2 = 0;
-		strcpy(resp_ptr2, resp.c_str());
-		strcat(resp_ptr2, mensaje);
-		thread t2(rdt_send_unicast, resp_ptr2, cliente_over_hamachi);
-		t2.detach();
+//		sockaddr_in cliente_over_hamachi;
+//		cliente_over_hamachi.sin_family = PF_INET;
+//		cliente_over_hamachi.sin_addr.s_addr = inet_addr("25.105.117.246");
+//		cliente_over_hamachi.sin_port = htons(6789);
+//		char * resp_ptr2 = new char[MAX_MESSAGE_LENGHT];
+//		*resp_ptr2 = 0;
+//		strcpy(resp_ptr2, resp.c_str());
+//		strcat(resp_ptr2, mensaje);
+//		thread t2(rdt_send_unicast, resp_ptr2, cliente_over_hamachi);
+//		t2.detach();
 
     } else if (strcmp(comando, "PRIVATE_MESSAGE") == 0) {
         // Enviar por unicast el mensaje
@@ -362,20 +362,6 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 
     }
 };
-
-//void rdt_rcv_unicast() {
-//	char buffer[MAX_PACKET_SIZE];
-//	// Para guardar la dirección del cliente
-//	struct sockaddr_in si_cliente;
-//	int slen = sizeof (si_cliente);
-//
-//	while (true) {
-//		recvfrom(sockUnicast, buffer, MAX_PACKET_SIZE, 0, (struct sockaddr *) &si_cliente, (socklen_t *) & slen);
-//		char* temp = buffer;
-//		thread t1(deliver_message, temp, si_cliente);
-//		t1.detach();
-//	}
-//}
 
 void unicastSocket_setUp() {
     memset(&sockUnicast, 0, sizeof (struct sockaddr_in));
@@ -544,29 +530,29 @@ char* makepkt(bool is_ACK, bool seqNum, string msj) {
 }
 
 void udt_send_multicast(char* msj) {
-	char* p = &msj[1];
-    cout << "udt_send_multicast header: " << bitset<8>(msj[0]) << " y mensaje: " << p << endl << endl;
+    cout << "udt_send_multicast: " << msj << endl << endl;
     sendto(sockMulticast, msj, strlen(msj), 0, (struct sockaddr *) &servMulticAddr, sizeof (struct sockaddr_in));
     delete [] msj;
 }
 
 void udt_send_unicast(char* msj, const sockaddr_in& cli_addr) {
 	char* p = &msj[1];
-    cout << "udt_send_uniicast header: " << bitset<8>(msj[0]) << " y mensaje: " << p << endl;
+    cout << "udt_send_unicast header: " << bitset<8>(msj[0]) << " y mensaje: " << p << endl;
 	cout << "to: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << endl << endl;
     sendto(sockUnicast, msj, strlen(msj), 0, (struct sockaddr *) &cli_addr, sizeof (cli_addr));
     delete [] msj;
 }
 
 void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
-    lock_guard<mutex> lock(lista_clientes_rdt_mutex);
+    //lock_guard<mutex> lock(lista_clientes_rdt_mutex);
+	char seqNum = msj[0];
     // Busco el cliente
     bool encontre_cliente = false;
     cliente_rdt* cliente_ptr;
     vector<cliente_rdt>::iterator it = lista_clientes_rdt.begin();
     while (not encontre_cliente && it != lista_clientes_rdt.end()) {
         if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
-            *cliente_ptr = *it;
+            cliente_ptr = &(*it);
             encontre_cliente = true;
         }
         it++;
@@ -596,7 +582,7 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
             }
             // En cualquier caso le contesto con un ACK y el mismo seqNum
             //salvo que haya recibido un ACK
-            thread t2(udt_send_unicast, makepkt(true, getSeqNum(msj[0]), ""), cli_addr);
+            thread t2(udt_send_unicast, makepkt(true, getSeqNum(seqNum), ""), cli_addr);
             t2.detach();
         }
     } else {
@@ -609,14 +595,15 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
         nuevo_cliente.expected_seq_num = 1;
         nuevo_cliente.ult_pkt_enviado = new char[MAX_PACKET_SIZE];
         nuevo_cliente.timer = 0;
-        nuevo_cliente.buffer_de_salida = new BoundedBuffer(1);
+        //nuevo_cliente.buffer_de_salida = new BoundedBuffer(1);
         lista_clientes_rdt.push_back(nuevo_cliente);
 
+		// Paso el mensaje a la aplicación
         thread t1(deliver_message, &msj[1], cli_addr);
         t1.detach();
+		
         // En cualquier caso le contesto con un ACK y el mismo seqNum
-        //salvo que haya recibido un ACK
-        thread t2(udt_send_unicast, makepkt(true, getSeqNum(msj[0]), ""), cli_addr);
+        thread t2(udt_send_unicast, makepkt(true, getSeqNum(seqNum), ""), cli_addr);
         t2.detach();
     }
 }
