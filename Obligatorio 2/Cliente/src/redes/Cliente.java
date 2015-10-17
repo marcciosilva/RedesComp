@@ -402,6 +402,7 @@ public class Cliente extends javax.swing.JFrame {
         socketMulticast.close();
 
         // Deshabilito
+        buttonPublico.setSelected(true);
         textFieldDestinatario.setText("Ingrese el destinatario aquí");
         textFieldDestinatario.setEnabled(false);
         jButtonDesconectar.setEnabled(false);
@@ -509,9 +510,11 @@ public class Cliente extends javax.swing.JFrame {
     }
 
     private void habilitarEnvios() {
-        jButtonDesconectar.setEnabled(true);
-        jButtonListarConectados.setEnabled(true);
-        jButtonEnviar.setEnabled(true); //deshabilito enviar
+        if (conectado) {
+            jButtonDesconectar.setEnabled(true);
+            jButtonListarConectados.setEnabled(true);
+            jButtonEnviar.setEnabled(true); //deshabilito enviar
+        }
     }
 
     public static void main(String args[]) {
