@@ -20,7 +20,6 @@ public class UtilsConfiabilidad {
         //extrae el string del mensaje sin contar la cabecera
         byte[] bytes = pkt.getData();
         byte[] data = Arrays.copyOfRange(bytes, 1, bytes.length - 1);
-        System.out.println("Largo de la data sin el header : " + String.valueOf(data.length));
         byte fin_deLinea = 0x00;
         int i = 0;
         while (data[i] != fin_deLinea) {

@@ -77,7 +77,6 @@ public class EnvioUnicast extends Thread {
             System.out.println("Entro al loop de rdt_send para enviar: " + msj);
             if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_DATA_0) {
                 byte[] data = msj.getBytes();
-                DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
                 out_pck = UtilsConfiabilidad.makepkt(false, 0, data, serverIP, serverPort);
                 Cliente.ultimo_pkt = out_pck;
                 cliente.estadoSender = Cliente.EstadoSender.ESPERO_ACK_0;
@@ -90,7 +89,6 @@ public class EnvioUnicast extends Thread {
 
             } else if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_DATA_1) {
                 byte[] data = msj.getBytes();
-                DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
                 out_pck = UtilsConfiabilidad.makepkt(false, 1, data, serverIP, serverPort);
                 Cliente.ultimo_pkt = out_pck;
                 cliente.estadoSender = Cliente.EstadoSender.ESPERO_ACK_1;
@@ -101,6 +99,7 @@ public class EnvioUnicast extends Thread {
                 }
                 Cliente.tiempo_enviado = Date.from(Instant.now());
             }
+			System.err.println("envié");
         }
     }
 }
