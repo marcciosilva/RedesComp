@@ -114,17 +114,17 @@ public class EnvioUnicast extends Thread {
                     }
                 } else if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_ACK_0
                         || cliente.estadoSender == Cliente.EstadoSender.ESPERO_ACK_1) {
+                    try {
                         //si saltó el timer entro por acá, sea que espere ACK0 o ACK1
-                    //reenvíos
-                    socketUnicast.send(out_pck);
-                    synchronized (this) {
-                        try {
+                        //reenvíos
+                        socketUnicast.send(out_pck);
+                        synchronized (this) {
                             wait(TIMEOUT);
-                        } catch (InterruptedException ex) {
-                            interrumpido = true;
-//                                socketUnicast = null;
-                            Logger.getLogger(EnvioUnicast.class.getName()).log(Level.SEVERE, null, ex);
                         }
+                    } catch (InterruptedException ex) {
+                        interrumpido = true;
+//                                socketUnicast = null;
+                        Logger.getLogger(EnvioUnicast.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
             }
