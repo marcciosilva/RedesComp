@@ -3,6 +3,7 @@ package redes;
 import java.awt.Color;
 import java.awt.Font;
 import java.io.IOException;
+import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
@@ -538,20 +539,21 @@ public class Cliente extends javax.swing.JFrame {
     }
     public static EstadoSender estadoSender = EstadoSender.ESPERO_DATA_0;
 
+	public static int cant_mensajes = 0;
     public static int multicastPort = 6789;
     private InetAddress multicastIP;
     private String strMulticastIP = "225.5.4.3";
     public final static int PACKETSIZE = 65507;
 	public static Date tiempo_enviado = null;
-	public static String ultimo_msj;
+	public static DatagramPacket ultimo_pkt;
 	public static boolean espero_ack = false;
     // El puerto donde corre el servidor. Se lee desde la interfaz
-    private int serverPort;
+    public static int serverPort;
     // La IP donde corre el servidor. Se lee desde la interfaz
     public static InetAddress serverIP;
     public MulticastSocket socketMulticast;
     // El socket para recibir y enviar mansajes unicast.
-    public DatagramSocket socketUnicast;
+    public static DatagramSocket socketUnicast;
     private final String strDesconectado = "Desconectado";
     private final String strEnLinea = "En línea";
     private boolean conectado = false;

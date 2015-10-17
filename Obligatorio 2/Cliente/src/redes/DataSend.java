@@ -18,6 +18,7 @@ public class DataSend extends Thread {
      */
     public DataSend(String msj) {
         System.out.println("Datasend: " + msj);
+        System.out.println("Length: " + msj.length());
         Cliente instance = Cliente.getInstance();
         if (msj.contains("LOGIN_OK")) {
             instance.comunicarOK();

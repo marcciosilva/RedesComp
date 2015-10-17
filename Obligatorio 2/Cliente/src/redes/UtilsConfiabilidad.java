@@ -21,7 +21,13 @@ public class UtilsConfiabilidad {
         byte[] bytes = pkt.getData();
         byte[] data = Arrays.copyOfRange(bytes, 1, bytes.length - 1);
         System.out.println("Largo de la data sin el header : " + String.valueOf(data.length));
-        return new String(data, 0, data.length);
+        byte fin_deLinea = 0x00;
+        int i = 0;
+        while (data[i] != fin_deLinea) {
+            i++;
+        }
+        i++;
+        return new String(data, 0, i);
     }
 
     public static boolean is_not_ACK(DatagramPacket rcvpkt) {

@@ -46,7 +46,8 @@ public class EnvioUnicast extends Thread {
 	public void run() {
 		try {
 			socketUnicast = cliente.getUnicastSocket();
-			Cliente.ultimo_msj = msj;
+			Cliente.cant_mensajes++;
+			System.out.println("Mensaje nro: " + Cliente.cant_mensajes);
 			rdt_send(msj);
 		} catch (IOException ex) {
 			Logger.getLogger(EnvioUnicast.class.getName()).log(Level.SEVERE, null, ex);
@@ -75,17 +76,27 @@ public class EnvioUnicast extends Thread {
 				byte[] data = msj.getBytes();
 				DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
 				out_pck = UtilsConfiabilidad.makeDatapkt(false, 0, paquete);
-				socketUnicast.send(out_pck);
-				Cliente.tiempo_enviado = Date.from(Instant.now());
+				Cliente.ultimo_pkt = out_pck;
 				cliente.estadoSender = Cliente.EstadoSender.ESPERO_ACK_0;
+				if (!(Cliente.cant_mensajes > 1 && (Cliente.cant_mensajes % 4 == 0))) {
+					socketUnicast.send(out_pck);
+				} else {
+					System.out.println("777777 Skipped 7777777");
+				}
+				Cliente.tiempo_enviado = Date.from(Instant.now());
 
 			} else if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_DATA_1) {
 				byte[] data = msj.getBytes();
 				DatagramPacket paquete = new DatagramPacket(data, data.length, serverIP, serverPort);
 				out_pck = UtilsConfiabilidad.makeDatapkt(false, 1, paquete);
-				socketUnicast.send(out_pck);
-				Cliente.tiempo_enviado = Date.from(Instant.now());
+				Cliente.ultimo_pkt = out_pck;
 				cliente.estadoSender = Cliente.EstadoSender.ESPERO_ACK_1;
+				if (!(Cliente.cant_mensajes > 1 && (Cliente.cant_mensajes % 4 == 0))) {
+					socketUnicast.send(out_pck);
+				} else {
+					System.out.println("777777 Skipped 7777777");
+				}
+				Cliente.tiempo_enviado = Date.from(Instant.now());
 			}
 		}
 	}
