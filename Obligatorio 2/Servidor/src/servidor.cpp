@@ -102,7 +102,6 @@ struct cliente_rdt {
 	int estado_sender; // De 0 a 3
 	bool expected_seq_num; // el seq num que espero recibir del cliente
 	char* ult_pkt_enviado;
-        int cantEnvios;
 	//BoundedBuffer* buffer_de_salida;
 };
 
@@ -462,7 +461,7 @@ void ping_clientes() {
 void ping_clientes_trigger() {
 	while (true) {
 		ping_clientes();
-		usleep(10000000); // 1 sec
+		usleep(1000000); // 1 sec
 	}
 }
 
@@ -472,8 +471,8 @@ void update_clientes() {
 	bool encontre = false;
 	vector<cliente>::iterator it = lista_clientes.begin();
 	while (not encontre && it != lista_clientes.end()) {
-		//si no lo vi por mas de 20 seg
-		if (difftime(now, it->last_seen) > 20) {
+		//si no lo vi por mas de 5 seg
+		if (difftime(now, it->last_seen) > 3) {
 			// Quitar al cliente de la lista
 			char * remitente = new char[MAX_NICKNAME_LENGHT];
 			strcpy(remitente, it->nick);
@@ -530,7 +529,7 @@ void update_clientes() {
 
 void update_clientes_trigger() {
 	while (true) {
-		usleep(20000000);
+		usleep(3000000);
 		update_clientes();
 	}
 }
@@ -667,8 +666,7 @@ void rdt_send_unicast(char* msj, const sockaddr_in & cli_addr, bool quitar_clien
 
 	cliente_ptr->timer = time(NULL);
 	strcpy(cliente_ptr->ult_pkt_enviado, pkt);
-        
-        cliente_ptr->cantEnvios++;
+
 	// Envío
 	thread t1(udt_send_unicast, pkt, cli_addr);
 	t1.detach();
@@ -691,7 +689,6 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 	}
 
 	if (encontre_cliente) {
-                cliente_ptr->cantEnvios = 1;
 		if (is_ACK(msj[0])) {
 			cout << "Es ACK" << endl;
 			// Es un ACK para procesar desde el sender
@@ -731,7 +728,6 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 		nuevo_cliente.expected_seq_num = 1;
 		nuevo_cliente.ult_pkt_enviado = new char[MAX_PACKET_SIZE];
 		nuevo_cliente.timer = 0;
-                nuevo_cliente.cantEnvios = 1;
 		//nuevo_cliente.buffer_de_salida = new BoundedBuffer(1);
 		lista_clientes_rdt.push_back(nuevo_cliente);
 
@@ -814,8 +810,7 @@ void timeout_checker_unicast() {
 	time_t now = time(NULL);
 	lock_guard<mutex> lock(lista_clientes_rdt_mutex);
 	for (vector<cliente_rdt>::iterator it = lista_clientes_rdt.begin(); it != lista_clientes_rdt.end(); it++) {
-		if (it->timer != 0 && difftime(now, it->timer) > (TIMEOUT_RDT_UNICAST * it->cantEnvios * 3)) {
-                   
+		if (it->timer != 0 && difftime(now, it->timer) > TIMEOUT_RDT_UNICAST) {
 			// Re-envío
 			cout << "######## reenvío ########" << endl;
 			char* pkt = new char[strlen(it->ult_pkt_enviado) + 1];
@@ -870,12 +865,12 @@ int main(int argc, char** argv) {
 	t1.detach();
 
 	//	// El thread que hace ping a los clientes
-		thread t2(ping_clientes_trigger);
-		t2.detach();
+	//	thread t2(ping_clientes_trigger);
+	//	t2.detach();
 	//
 	//	// El thread que chequea si los clientes respondieron al ping
-		thread t3(update_clientes_trigger);
-		t3.detach();
+	//	thread t3(update_clientes_trigger);
+	//	t3.detach();
 
 	// El thread que chequea si hay que reenviar los mensajess unicast
 	thread t4(timeout_checker_unicast_trigger);
