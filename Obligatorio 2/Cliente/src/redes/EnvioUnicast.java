@@ -120,6 +120,7 @@ public class EnvioUnicast extends Thread {
                     Cliente.tiempo_enviado = Date.from(Instant.now());
                 }
             }
+            System.err.println("envié");
         }
         System.out.println("EnvioUnicast : rdt_send finalizado");
     }
