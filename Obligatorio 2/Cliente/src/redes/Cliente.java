@@ -233,7 +233,7 @@ public class Cliente extends javax.swing.JFrame {
 			try {
 				//inicializo socket de login
 				socketUnicast = new DatagramSocket();
-                //inicializo el listener unicast para ya poder recibir
+				//inicializo el listener unicast para ya poder recibir
 				//respuesta del LOGIN
 				listenerUnicast = new LectorUnicast(aplicarConfiabilidad, serverIP, serverPort);
 				listenerUnicast.start();
@@ -241,9 +241,6 @@ public class Cliente extends javax.swing.JFrame {
 				threadEnvioUnicast = new EnvioUnicast(aplicarConfiabilidad, serverIP, serverPort, bufferEnvio);
 				threadEnvioUnicast.start();
 
-				if (bufferEnvio == null) {
-					bufferEnvio = bufferEnvio = new LinkedBlockingQueue(50);
-				};
 				String msj = "LOGIN " + apodo + "\0";
 				enviarMensaje(msj);
 			} catch (SocketException ex) {
@@ -280,7 +277,7 @@ public class Cliente extends javax.swing.JFrame {
 					msj = msj.concat(destinatario + " ");
 					msj = msj.concat(contenidoMsj);
 					msj = msj.concat("\0");
-                    //muestro mi propio mensaje en el chat antes de enviarlo
+					//muestro mi propio mensaje en el chat antes de enviarlo
 					//para poder seguir el hilo de la conversación
 					updateChat(apodo + " > " + destinatario + ": " + contenidoMsj, true, false);
 					enviarMensaje(msj);
@@ -296,7 +293,7 @@ public class Cliente extends javax.swing.JFrame {
 		} else {
 			JOptionPane.showMessageDialog(this, "Debe escribir un mensaje antes de tocar Enviar", "Error", JOptionPane.ERROR_MESSAGE);
 		}
-        // Limpio la línea de chatMsj pero no la de destinatario, por si se
+		// Limpio la línea de chatMsj pero no la de destinatario, por si se
 		//quiere seguir la comunicación privada
 		jTextFieldMensaje.setText(null);
     }//GEN-LAST:event_jButtonEnviarActionPerformed
@@ -409,8 +406,9 @@ public class Cliente extends javax.swing.JFrame {
 	 */
 	public void terminarConexion() {
 
+		conectado = false;
+
 		bufferEnvio.clear();
-		bufferEnvio = null;
 
 		// cierro el socket unicast
 		socketUnicast.close();
@@ -440,7 +438,6 @@ public class Cliente extends javax.swing.JFrame {
 		// Actualizo otros
 		jLabelStatus.setText(strDesconectado);
 		jLabelStatus.setForeground(Color.RED);
-		conectado = false;
 	}
 
 	/**
@@ -471,7 +468,7 @@ public class Cliente extends javax.swing.JFrame {
 	 */
 	public void comunicarOK() {
 		try {
-            // Corro el listener
+			// Corro el listener
 			//inicializo socket multicast
 			// Fijo la dirección ip y el puerto de donde voy a escuchar los mensajes. IP 225.5.4.<nro_grupo> puerto 6789
 			multicastIP = InetAddress.getByName(strMulticastIP);
