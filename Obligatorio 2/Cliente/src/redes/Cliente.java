@@ -25,28 +25,28 @@ import org.apache.commons.validator.routines.InetAddressValidator;
  */
 public class Cliente extends javax.swing.JFrame {
 
-    private static Cliente instance = null;
+	private static Cliente instance = null;
 
-    /**
-     * Devuelve instancia de la interfaz
-     *
-     * @return Instancia de la interfaz
-     */
-    public static Cliente getInstance() {
-        if (instance == null) {
-            instance = new Cliente();
-        }
-        return instance;
-    }
+	/**
+	 * Devuelve instancia de la interfaz
+	 *
+	 * @return Instancia de la interfaz
+	 */
+	public static Cliente getInstance() {
+		if (instance == null) {
+			instance = new Cliente();
+		}
+		return instance;
+	}
 
-    private Cliente() {
-        initComponents();
-        // Botón 'Enviar' como predeterminado al apretar 'Enter'
-        getRootPane().setDefaultButton(jButtonEnviar);
-        bufferEnvio = new LinkedBlockingQueue(50);
-    }
+	private Cliente() {
+		initComponents();
+		// Botón 'Enviar' como predeterminado al apretar 'Enter'
+		getRootPane().setDefaultButton(jButtonEnviar);
+		bufferEnvio = new LinkedBlockingQueue(50);
+	}
 
-    @SuppressWarnings("unchecked")
+	@SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
@@ -205,367 +205,374 @@ public class Cliente extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButtonConectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonConectarActionPerformed
-        String strHostIP = jTextFieldHostIP.getText();
-        String strPort = jTextFieldPort.getText();
-        apodo = jTextFieldApodo.getText();
+		String strHostIP = jTextFieldHostIP.getText();
+		String strPort = jTextFieldPort.getText();
+		apodo = jTextFieldApodo.getText();
 
-        // Verificar IP
-        serverIP = null;
-        try {
-            serverIP = InetAddress.getByName(strHostIP);
-        } catch (UnknownHostException ex) {
-        }
-        boolean okIP = okIP(strHostIP);
-        // Verificar Puerto
-        boolean okPort;
-        try {
-            serverPort = Integer.parseInt(strPort);
-            okPort = serverPort >= 4000;
-        } catch (NumberFormatException e) {
-            okPort = false;
-            System.err.println(e);
-        }
-        // Verificar Apodo
-        boolean okApodo = strSinEspacios(apodo);
+		// Verificar IP
+		serverIP = null;
+		try {
+			serverIP = InetAddress.getByName(strHostIP);
+		} catch (UnknownHostException ex) {
+		}
+		boolean okIP = okIP(strHostIP);
+		// Verificar Puerto
+		boolean okPort;
+		try {
+			serverPort = Integer.parseInt(strPort);
+			okPort = serverPort >= 4000;
+		} catch (NumberFormatException e) {
+			okPort = false;
+			System.err.println(e);
+		}
+		// Verificar Apodo
+		boolean okApodo = strSinEspacios(apodo);
 
-        // Mandar datagrama y esperar por conexión exitosa
-        if (okIP && okPort && okApodo) {
-            try {
-                //inicializo socket de login
-                socketUnicast = new DatagramSocket();
+		// Mandar datagrama y esperar por conexión exitosa
+		if (okIP && okPort && okApodo) {
+			try {
+				//inicializo socket de login
+				socketUnicast = new DatagramSocket();
                 //inicializo el listener unicast para ya poder recibir
-                //respuesta del LOGIN
-                listenerUnicast = new LectorUnicast(aplicarConfiabilidad, serverIP, serverPort);
-                listenerUnicast.start();
+				//respuesta del LOGIN
+				listenerUnicast = new LectorUnicast(aplicarConfiabilidad, serverIP, serverPort);
+				listenerUnicast.start();
 
-                threadEnvioUnicast = new EnvioUnicast(aplicarConfiabilidad, serverIP, serverPort, bufferEnvio);
-                threadEnvioUnicast.start();
+				threadEnvioUnicast = new EnvioUnicast(aplicarConfiabilidad, serverIP, serverPort, bufferEnvio);
+				threadEnvioUnicast.start();
 
-                String msj = "LOGIN " + apodo + "\0";
-                enviarMensaje(msj);
-            } catch (SocketException ex) {
-                Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        } else {
-            String error = "";
-            if (!okIP) {
-                error = "La IP ingresada no es válida.";
-            } else if (!okPort) {
-                error = "El número de puerto ingresado no es válido.";
-            } else if (!okApodo) {
-                error = "El Apodo ingresado no es válido.\nEl mismo no debe contener espacios.";
-            }
-            JOptionPane.showMessageDialog(this, "Error! " + error, "Cliente", JOptionPane.ERROR_MESSAGE);
-        }
+				if (bufferEnvio == null) {
+					bufferEnvio = bufferEnvio = new LinkedBlockingQueue(50);
+				};
+				String msj = "LOGIN " + apodo + "\0";
+				enviarMensaje(msj);
+			} catch (SocketException ex) {
+				Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+			}
+		} else {
+			String error = "";
+			if (!okIP) {
+				error = "La IP ingresada no es válida.";
+			} else if (!okPort) {
+				error = "El número de puerto ingresado no es válido.";
+			} else if (!okApodo) {
+				error = "El Apodo ingresado no es válido.\nEl mismo no debe contener espacios.";
+			}
+			JOptionPane.showMessageDialog(this, "Error! " + error, "Cliente", JOptionPane.ERROR_MESSAGE);
+		}
 
     }//GEN-LAST:event_jButtonConectarActionPerformed
 
     private void jButtonDesconectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonDesconectarActionPerformed
-        String msj = "LOGOUT\0";
-        enviarMensaje(msj);
+		String msj = "LOGOUT\0";
+		enviarMensaje(msj);
     }//GEN-LAST:event_jButtonDesconectarActionPerformed
 
     private void jButtonEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEnviarActionPerformed
-        // Obtengo el chatMsj a ser enviado
-        String contenidoMsj = jTextFieldMensaje.getText();
-        // Me fijo si ingresó texto
-        if (!contenidoMsj.isEmpty()) {
-            if (buttonPrivado.isSelected()) {
-                String destinatario = textFieldDestinatario.getText();
-                if (!destinatario.equals("")) {
-                    String msj = "PRIVATE_MESSAGE ";
-                    msj = msj.concat(destinatario + " ");
-                    msj = msj.concat(contenidoMsj);
-                    msj = msj.concat("\0");
+		// Obtengo el chatMsj a ser enviado
+		String contenidoMsj = jTextFieldMensaje.getText();
+		// Me fijo si ingresó texto
+		if (!contenidoMsj.isEmpty()) {
+			if (buttonPrivado.isSelected()) {
+				String destinatario = textFieldDestinatario.getText();
+				if (!destinatario.equals("")) {
+					String msj = "PRIVATE_MESSAGE ";
+					msj = msj.concat(destinatario + " ");
+					msj = msj.concat(contenidoMsj);
+					msj = msj.concat("\0");
                     //muestro mi propio mensaje en el chat antes de enviarlo
-                    //para poder seguir el hilo de la conversación
-                    updateChat(apodo + " > " + destinatario + ": " + contenidoMsj, true, false);
-                    enviarMensaje(msj);
-                } else {
-                    JOptionPane.showMessageDialog(this, "Debe ingresar un nombre de destinatario", "Error", JOptionPane.ERROR_MESSAGE);
-                }
-            } else {
-                String msj = "MESSAGE ";
-                msj = msj.concat(contenidoMsj);
-                msj = msj.concat("\0");
-                enviarMensaje(msj);
-            }
-        } else {
-            JOptionPane.showMessageDialog(this, "Debe escribir un mensaje antes de tocar Enviar", "Error", JOptionPane.ERROR_MESSAGE);
-        }
+					//para poder seguir el hilo de la conversación
+					updateChat(apodo + " > " + destinatario + ": " + contenidoMsj, true, false);
+					enviarMensaje(msj);
+				} else {
+					JOptionPane.showMessageDialog(this, "Debe ingresar un nombre de destinatario", "Error", JOptionPane.ERROR_MESSAGE);
+				}
+			} else {
+				String msj = "MESSAGE ";
+				msj = msj.concat(contenidoMsj);
+				msj = msj.concat("\0");
+				enviarMensaje(msj);
+			}
+		} else {
+			JOptionPane.showMessageDialog(this, "Debe escribir un mensaje antes de tocar Enviar", "Error", JOptionPane.ERROR_MESSAGE);
+		}
         // Limpio la línea de chatMsj pero no la de destinatario, por si se
-        //quiere seguir la comunicación privada
-        jTextFieldMensaje.setText(null);
+		//quiere seguir la comunicación privada
+		jTextFieldMensaje.setText(null);
     }//GEN-LAST:event_jButtonEnviarActionPerformed
 
     private void jButtonListarConectadosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonListarConectadosActionPerformed
-        String msj = "GET_CONNECTED\0";
-        enviarMensaje(msj);
+		String msj = "GET_CONNECTED\0";
+		enviarMensaje(msj);
     }//GEN-LAST:event_jButtonListarConectadosActionPerformed
 
     private void cerrandoVentanaEvent(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_cerrandoVentanaEvent
-        if (conectado) {
-            terminarConexion();
-        }
-        this.dispose();
+		if (conectado) {
+			terminarConexion();
+		}
+		this.dispose();
     }//GEN-LAST:event_cerrandoVentanaEvent
 
     private void buttonPrivadoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonPrivadoActionPerformed
-        textFieldDestinatario.setVisible(true);
-        labelDestinatario.setVisible(true);
+		textFieldDestinatario.setVisible(true);
+		labelDestinatario.setVisible(true);
     }//GEN-LAST:event_buttonPrivadoActionPerformed
 
     private void buttonPublicoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonPublicoActionPerformed
-        textFieldDestinatario.setVisible(false);
-        labelDestinatario.setVisible(false);
+		textFieldDestinatario.setVisible(false);
+		labelDestinatario.setVisible(false);
     }//GEN-LAST:event_buttonPublicoActionPerformed
 
     private void jTextFieldHostIPActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextFieldHostIPActionPerformed
-        // TODO add your handling code here:
+		// TODO add your handling code here:
     }//GEN-LAST:event_jTextFieldHostIPActionPerformed
 
-    private void enviarMensaje(String msj) {
-        (new EnviarMensajeUnicast(bufferEnvio, msj)).start();
-    }
+	private void enviarMensaje(String msj) {
+		(new EnviarMensajeUnicast(bufferEnvio, msj)).start();
+	}
 
-    private boolean okIP(String ip) {
-        InetAddressValidator validator = InetAddressValidator.getInstance();
-        return validator.isValidInet4Address(ip) || ip.equals("localhost");
-    }
+	private boolean okIP(String ip) {
+		InetAddressValidator validator = InetAddressValidator.getInstance();
+		return validator.isValidInet4Address(ip) || ip.equals("localhost");
+	}
 
-    private boolean strSinEspacios(String s) {
-        return !(s.matches(".*(\\s+).*") || s.matches(""));
-    }
+	private boolean strSinEspacios(String s) {
+		return !(s.matches(".*(\\s+).*") || s.matches(""));
+	}
 
-    /**
-     * Devuelve el apodo del cliente, determinado en la interfaz
-     *
-     * @return Apodo del cliente
-     */
-    public String getApodo() {
-        return apodo;
-    }
+	/**
+	 * Devuelve el apodo del cliente, determinado en la interfaz
+	 *
+	 * @return Apodo del cliente
+	 */
+	public String getApodo() {
+		return apodo;
+	}
 
-    /**
-     * Devuelve referencia al socketUnicast
-     *
-     * @return Referencia al socketUnicast
-     */
-    public DatagramSocket getUnicastSocket() {
-        //es thread-safe, no hay que sincronizar su uso
-        return socketUnicast;
-    }
+	/**
+	 * Devuelve referencia al socketUnicast
+	 *
+	 * @return Referencia al socketUnicast
+	 */
+	public DatagramSocket getUnicastSocket() {
+		//es thread-safe, no hay que sincronizar su uso
+		return socketUnicast;
+	}
 
-    public MulticastSocket getMulticastSocket() {
-        //es thread-safe, no hay que sincronizar su uso
-        return socketMulticast;
-    }
+	public MulticastSocket getMulticastSocket() {
+		//es thread-safe, no hay que sincronizar su uso
+		return socketMulticast;
+	}
 
-    /**
-     * Comunica a la interfaz la información de usuarios conectados.
-     *
-     * @param conectados Información de usuarios conectados
-     */
-    public void comunicarConectados(String conectados) {
-        String usuarios[] = conectados.split(" ", 2);
-        String aviso = "Usuarios conectados: " + usuarios[1];
-        updateChat(aviso, true, false);
-    }
+	/**
+	 * Comunica a la interfaz la información de usuarios conectados.
+	 *
+	 * @param conectados Información de usuarios conectados
+	 */
+	public void comunicarConectados(String conectados) {
+		String usuarios[] = conectados.split(" ", 2);
+		String aviso = "Usuarios conectados: " + usuarios[1];
+		updateChat(aviso, true, false);
+	}
 
-    public void comunicarMensaje(String msj) {
-        String remitente_y_mensaje[] = msj.split(" ", 2)[1].split(" ", 2);
-        String aviso = remitente_y_mensaje[0] + ": " + remitente_y_mensaje[1];
-        updateChat(aviso, true, false);
-    }
+	public void comunicarMensaje(String msj) {
+		String remitente_y_mensaje[] = msj.split(" ", 2)[1].split(" ", 2);
+		String aviso = remitente_y_mensaje[0] + ": " + remitente_y_mensaje[1];
+		updateChat(aviso, true, false);
+	}
 
-    public void comunicarAlive() {
-        //hay que enviar un IS_ALIVE al server por unicast
-        String msj = "IS_ALIVE\0";
-        if (threadEnvioUnicast.isAlive()) {
-            System.out.println("El threadEnvioUnicast está vivo");
-        } else {
-            System.out.println("El threadEnvioUnicast NOO está vivo");
-        }
-        enviarMensaje(msj);
-    }
+	public void comunicarAlive() {
+		//hay que enviar un IS_ALIVE al server por unicast
+		String msj = "IS_ALIVE\0";
+		if (threadEnvioUnicast.isAlive()) {
+			System.out.println("El threadEnvioUnicast está vivo");
+		} else {
+			System.out.println("El threadEnvioUnicast NOO está vivo");
+		}
+		enviarMensaje(msj);
+	}
 
-    public void comunicarMensajePrivado(String msj) {
-        String remitente_y_mensaje[] = msj.split(" ", 2)[1].split(" ", 2);
-        String aviso = remitente_y_mensaje[0] + " > " + apodo + ": " + remitente_y_mensaje[1];
-        updateChat(aviso, true, false);
-    }
+	public void comunicarMensajePrivado(String msj) {
+		String remitente_y_mensaje[] = msj.split(" ", 2)[1].split(" ", 2);
+		String aviso = remitente_y_mensaje[0] + " > " + apodo + ": " + remitente_y_mensaje[1];
+		updateChat(aviso, true, false);
+	}
 
-    void comunicarMensajePrivadoFailed(String msj) {
-        String mensaje[] = msj.split(" ", 2);
-        updateChat(mensaje[1], true, false);
-    }
+	void comunicarMensajePrivadoFailed(String msj) {
+		String mensaje[] = msj.split(" ", 2);
+		updateChat(mensaje[1], true, false);
+	}
 
-    /**
-     * Termina la conexión del cliente con el servidor, terminando los threads,
-     * cerrando los sockets correspondientes y limpiando el área de chat
-     */
-    public void terminarConexion() {
-        // cierro el socket unicast
-        socketUnicast.close();
+	/**
+	 * Termina la conexión del cliente con el servidor, terminando los threads,
+	 * cerrando los sockets correspondientes y limpiando el área de chat
+	 */
+	public void terminarConexion() {
 
-        // cierro el socket multicast
-        socketMulticast.close();
+		bufferEnvio.clear();
+		bufferEnvio = null;
 
-        // Deshabilito
-        buttonPublico.setSelected(true);
-        textFieldDestinatario.setText("Ingrese el destinatario aquí");
-        textFieldDestinatario.setEnabled(false);
-        jButtonDesconectar.setEnabled(false);
-        jTextFieldMensaje.setEnabled(false);
-        jTextFieldMensaje.setText("Ingrese su mensaje");
-        jButtonEnviar.setEnabled(false);
-        jButtonListarConectados.setEnabled(false);
+		// cierro el socket unicast
+		socketUnicast.close();
 
-        // Habilito
-        jButtonConectar.setEnabled(true);
-        jTextFieldHostIP.setEditable(true);
-        jTextFieldPort.setEditable(true);
-        jTextFieldApodo.setEditable(true);
+		// cierro el socket multicast
+		socketMulticast.close();
 
-        // Actualizo chat
-        updateChat("", false, true);
+		// Deshabilito
+		buttonPublico.setSelected(true);
+		textFieldDestinatario.setText("Ingrese el destinatario aquí");
+		textFieldDestinatario.setEnabled(false);
+		jButtonDesconectar.setEnabled(false);
+		jTextFieldMensaje.setEnabled(false);
+		jTextFieldMensaje.setText("Ingrese su mensaje");
+		jButtonEnviar.setEnabled(false);
+		jButtonListarConectados.setEnabled(false);
 
-        // Actualizo otros
-        jLabelStatus.setText(strDesconectado);
-        jLabelStatus.setForeground(Color.RED);
-        conectado = false;
-    }
+		// Habilito
+		jButtonConectar.setEnabled(true);
+		jTextFieldHostIP.setEditable(true);
+		jTextFieldPort.setEditable(true);
+		jTextFieldApodo.setEditable(true);
 
-    /**
-     * Actualiza el área de chat con mutuaexclusión
-     *
-     * @param msj Mensaje a mostrar
-     * @param enable Indica si se debe deshabilitar el área de chat
-     * @param clear Indica si se debe limpiar el área de chat
-     */
-    public synchronized void updateChat(String msj, boolean enable, boolean clear) {
-        if (clear) {
-            jTextAreaChat.setText("");
-        }
-        if (jTextAreaChat.isEnabled() != enable) {
-            jTextAreaChat.setEnabled(enable);
-        }
-        if (jTextAreaChat.isEnabled() && !msj.equals("")) {
-            jTextAreaChat.append(msj + "\n");
-        }
-    }
+		// Actualizo chat
+		updateChat("", false, true);
 
-    public void comunicarNoOk() {
-        socketUnicast.close();
-    }
+		// Actualizo otros
+		jLabelStatus.setText(strDesconectado);
+		jLabelStatus.setForeground(Color.RED);
+		conectado = false;
+	}
 
-    /**
-     * Le comunica a la interfaz que hubo un login correcto
-     */
-    public void comunicarOK() {
-        try {
+	/**
+	 * Actualiza el área de chat con mutuaexclusión
+	 *
+	 * @param msj Mensaje a mostrar
+	 * @param enable Indica si se debe deshabilitar el área de chat
+	 * @param clear Indica si se debe limpiar el área de chat
+	 */
+	public synchronized void updateChat(String msj, boolean enable, boolean clear) {
+		if (clear) {
+			jTextAreaChat.setText("");
+		}
+		if (jTextAreaChat.isEnabled() != enable) {
+			jTextAreaChat.setEnabled(enable);
+		}
+		if (jTextAreaChat.isEnabled() && !msj.equals("")) {
+			jTextAreaChat.append(msj + "\n");
+		}
+	}
+
+	public void comunicarNoOk() {
+		socketUnicast.close();
+	}
+
+	/**
+	 * Le comunica a la interfaz que hubo un login correcto
+	 */
+	public void comunicarOK() {
+		try {
             // Corro el listener
-            //inicializo socket multicast
-            // Fijo la dirección ip y el puerto de donde voy a escuchar los mensajes. IP 225.5.4.<nro_grupo> puerto 6789
-            multicastIP = InetAddress.getByName(strMulticastIP);
-            socketMulticast = new MulticastSocket(multicastPort);
-            socketMulticast.joinGroup(multicastIP);
-            multicastThread = new LectorMulticast(aplicarConfiabilidad);
-            multicastThread.start();
+			//inicializo socket multicast
+			// Fijo la dirección ip y el puerto de donde voy a escuchar los mensajes. IP 225.5.4.<nro_grupo> puerto 6789
+			multicastIP = InetAddress.getByName(strMulticastIP);
+			socketMulticast = new MulticastSocket(multicastPort);
+			socketMulticast.joinGroup(multicastIP);
+			multicastThread = new LectorMulticast(aplicarConfiabilidad);
+			multicastThread.start();
 
-            conectado = true;
-            // Deshabilito
-            jButtonConectar.setEnabled(false);
-            jTextFieldHostIP.setEditable(false);
-            jTextFieldPort.setEditable(false);
-            jTextFieldApodo.setEditable(false);
+			conectado = true;
+			// Deshabilito
+			jButtonConectar.setEnabled(false);
+			jTextFieldHostIP.setEditable(false);
+			jTextFieldPort.setEditable(false);
+			jTextFieldApodo.setEditable(false);
 
-            // Habilito
-            jButtonDesconectar.setEnabled(true);
-            textFieldDestinatario.setText(null);
-            textFieldDestinatario.setEnabled(true);
-            jTextFieldMensaje.setText(null);
-            jTextFieldMensaje.setEnabled(true);
-            jButtonEnviar.setEnabled(true);
-            jButtonListarConectados.setEnabled(true);
+			// Habilito
+			jButtonDesconectar.setEnabled(true);
+			textFieldDestinatario.setText(null);
+			textFieldDestinatario.setEnabled(true);
+			jTextFieldMensaje.setText(null);
+			jTextFieldMensaje.setEnabled(true);
+			jButtonEnviar.setEnabled(true);
+			jButtonListarConectados.setEnabled(true);
 
-            // Actualizo estado
-            jLabelStatus.setText(strEnLinea);
-            jLabelStatus.setForeground(Color.getHSBColor(0.36f, 0.75f, 0.7f));
+			// Actualizo estado
+			jLabelStatus.setText(strEnLinea);
+			jLabelStatus.setForeground(Color.getHSBColor(0.36f, 0.75f, 0.7f));
 
-            // Habilito chat
-            updateChat("Usted está en línea!", true, false);
-        } catch (UnknownHostException ex) {
-            Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
+			// Habilito chat
+			updateChat("Usted está en línea!", true, false);
+		} catch (UnknownHostException ex) {
+			Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+		} catch (IOException ex) {
+			Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);
+		}
+	}
 
-    public void envioFinalizado() {
-        System.out.println("Envío finalizado correctamente");
-        //cambio estado de la máquina del sender
-        if (estadoSender == EstadoSender.ESPERO_ACK_0) {
-            estadoSender = EstadoSender.ESPERO_DATA_1;
-        } else if (estadoSender == EstadoSender.ESPERO_ACK_1) {
-            estadoSender = EstadoSender.ESPERO_DATA_0;
-        }
-        while (threadEnvioUnicast.getState() != Thread.State.WAITING);
-        synchronized (threadEnvioUnicast) {
-            threadEnvioUnicast.notify();
-        }
-    }
+	public void envioFinalizado() {
+		System.out.println("Envío finalizado correctamente");
+		//cambio estado de la máquina del sender
+		if (estadoSender == EstadoSender.ESPERO_ACK_0) {
+			estadoSender = EstadoSender.ESPERO_DATA_1;
+		} else if (estadoSender == EstadoSender.ESPERO_ACK_1) {
+			estadoSender = EstadoSender.ESPERO_DATA_0;
+		}
+		while (threadEnvioUnicast.getState() != Thread.State.WAITING);
+		synchronized (threadEnvioUnicast) {
+			threadEnvioUnicast.notify();
+		}
+	}
 
-    public static void main(String args[]) {
-        // Set look and Feel
-        try {
-            javax.swing.UIManager.setLookAndFeel("com.sun.java.swing.plaf.gtk.GTKLookAndFeel");
-        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
-        }
+	public static void main(String args[]) {
+		// Set look and Feel
+		try {
+			javax.swing.UIManager.setLookAndFeel("com.sun.java.swing.plaf.gtk.GTKLookAndFeel");
+		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
+		}
 
-        // Creo jFrame
-        Cliente v = Cliente.getInstance();
-        v.setLocationRelativeTo(null);
-        v.setVisible(true);
+		// Creo jFrame
+		Cliente v = Cliente.getInstance();
+		v.setLocationRelativeTo(null);
+		v.setVisible(true);
 
-        timeoutChecker = new Timeout_checker();
-        timeoutChecker.start();
-    }
+		timeoutChecker = new Timeout_checker();
+		timeoutChecker.start();
+	}
 
-    BlockingQueue<String> bufferEnvio;
+	BlockingQueue<String> bufferEnvio;
 //	BufferMensajesEnviar bufferEnvio;
-    EnvioUnicast threadEnvioUnicast;
+	EnvioUnicast threadEnvioUnicast;
 
-    //Máquina de estados del emisor
-    public static enum EstadoSender {
+	//Máquina de estados del emisor
+	public static enum EstadoSender {
 
-        ESPERO_DATA_0, ESPERO_ACK_0, ESPERO_DATA_1, ESPERO_ACK_1
-    }
-    public static EstadoSender estadoSender = EstadoSender.ESPERO_DATA_0;
+		ESPERO_DATA_0, ESPERO_ACK_0, ESPERO_DATA_1, ESPERO_ACK_1
+	}
+	public static EstadoSender estadoSender = EstadoSender.ESPERO_DATA_0;
 
-    public static int cant_mensajes = 0;
-    public static int multicastPort = 6789;
-    private InetAddress multicastIP;
-    public static String strMulticastIP = "225.5.4.3";
-    public final static int PACKETSIZE = 65507;
-    public static Date tiempo_enviado = null;
-    public static DatagramPacket ultimo_pkt;
-    public static boolean espero_ack = false;
-    // El puerto donde corre el servidor. Se lee desde la interfaz
-    public static int serverPort;
-    // La IP donde corre el servidor. Se lee desde la interfaz
-    public static InetAddress serverIP;
-    public MulticastSocket socketMulticast;
-    // El socket para recibir y enviar mansajes unicast.
-    public static DatagramSocket socketUnicast;
-    private final String strDesconectado = "Desconectado";
-    private final String strEnLinea = "En línea";
-    private boolean conectado = false;
-    private String apodo;
-    private boolean aplicarConfiabilidad = true;
-    private LectorMulticast multicastThread;
-    private LectorUnicast listenerUnicast;
-    private static Timeout_checker timeoutChecker;
+	public static int cant_mensajes = 0;
+	public static int multicastPort = 6789;
+	private InetAddress multicastIP;
+	public static String strMulticastIP = "225.5.4.3";
+	public final static int PACKETSIZE = 65507;
+	public static Date tiempo_enviado = null;
+	public static DatagramPacket ultimo_pkt;
+	public static boolean espero_ack = false;
+	// El puerto donde corre el servidor. Se lee desde la interfaz
+	public static int serverPort;
+	// La IP donde corre el servidor. Se lee desde la interfaz
+	public static InetAddress serverIP;
+	public MulticastSocket socketMulticast;
+	// El socket para recibir y enviar mansajes unicast.
+	public static DatagramSocket socketUnicast;
+	private final String strDesconectado = "Desconectado";
+	private final String strEnLinea = "En línea";
+	private boolean conectado = false;
+	private String apodo;
+	private boolean aplicarConfiabilidad = true;
+	private LectorMulticast multicastThread;
+	private LectorUnicast listenerUnicast;
+	private static Timeout_checker timeoutChecker;
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.ButtonGroup buttonGroup1;
     private javax.swing.JRadioButton buttonPrivado;
