@@ -49,9 +49,15 @@ struct BoundedBuffer {
 
 	BoundedBuffer(int capacity) : capacity(capacity), front(0), rear(0), count(0) {
 		buffer = new char*[capacity];
+		for (int i = 0; i < capacity; i++) {
+			buffer[i] = new char[MAX_MESSAGE_LENGHT];
+		}
 	}
 
 	~BoundedBuffer() {
+		for (int i = 0; i < capacity; i++) {
+			delete [] buffer[i];
+		};
 		delete[] buffer;
 	}
 
@@ -60,7 +66,7 @@ struct BoundedBuffer {
 
 		not_full.wait(l, [this]() {
 			return count != capacity; });
-
+			cout << "MENSAJES EN COLA: " << count << "\n";
 		buffer[rear] = data;
 		rear = (rear + 1) % capacity;
 		++count;
@@ -84,6 +90,23 @@ struct BoundedBuffer {
 	}
 };
 
+/*
+ void consumer(int id, BoundedBuffer& buffer){
+	for(int i = 0; i < 50; ++i){
+		int value = buffer.fetch();
+		std::cout << "Consumer " << id << " fetched " << value << std::endl;
+		std::this_thread::sleep_for(std::chrono::milliseconds(250));
+	}
+}
+
+void producer(int id, BoundedBuffer& buffer){
+	for(int i = 0; i < 75; ++i){
+		buffer.deposit(i);
+		std::cout << "Produced " << id << " produced " << i << std::endl;
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
+}
+ */
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Variables globales %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% //
 
 struct cliente {
@@ -102,7 +125,7 @@ struct cliente_rdt {
 	int estado_sender; // De 0 a 3
 	bool expected_seq_num; // el seq num que espero recibir del cliente
 	char* ult_pkt_enviado;
-	//BoundedBuffer* buffer_de_salida;
+	BoundedBuffer* buffer_de_salida;
 };
 
 mutex lista_clientes_rdt_mutex;
@@ -146,8 +169,6 @@ int cantEnviosUnicast = 0;
 void rdt_send_unicast(char* msj, const sockaddr_in& cli_addr, bool quitar_cliente);
 
 void udt_send_multicast(char* msj);
-
-void multicast_acks_checker_trigger();
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% APLICACIÓN %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% //
 
@@ -424,16 +445,16 @@ void unicastSocket_setUp() {
 
 void multicastSocket_setUp() {
 	// Creo el socket UDP
-	sockMulticast = socket(AF_INET, SOCK_DGRAM, 0);
+	sockMulticast = socket(PF_INET, SOCK_DGRAM, 0);
 	if (sockMulticast < 0) perror("Error creating socket");
 
 	memset(&servMulticAddr, 0, sizeof (struct sockaddr_in));
 	memset(&servMulticInterface, 0, sizeof (struct sockaddr_in));
 
 	// Set local interface address
-	servMulticInterface.sin_family = AF_INET;
-	servMulticInterface.sin_port = htons(6788);
-	servMulticInterface.sin_addr.s_addr = inet_addr(multicastIP);
+	servMulticInterface.sin_family = PF_INET;
+	servMulticInterface.sin_port = htons(0);
+	servMulticInterface.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	// Bind socket to local interface
 	int status = bind(sockMulticast, (struct sockaddr *) &servMulticInterface, (socklen_t)sizeof (servMulticInterface));
@@ -441,11 +462,9 @@ void multicastSocket_setUp() {
 
 	// Set multicast packet TTL; default TTL is 1
 	setsockopt(sockMulticast, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof (unsigned char));
-	// Set multicast loopback
-	setsockopt(sockMulticast, IPPROTO_IP, IP_MULTICAST_LOOP, &ttl, sizeof (unsigned char));
 
 	// Set destination address
-	servMulticAddr.sin_family = AF_INET;
+	servMulticAddr.sin_family = PF_INET;
 	servMulticAddr.sin_addr.s_addr = inet_addr(multicastIP);
 	servMulticAddr.sin_port = htons(multicastPort);
 }
@@ -490,6 +509,7 @@ void update_clientes() {
 				vector<cliente_rdt>::iterator it2 = lista_clientes_rdt.begin();
 				while (not encontre2 && it2 != lista_clientes_rdt.end()) {
 					if (it2->address.sin_addr.s_addr == it->address.sin_addr.s_addr && it2->address.sin_port == it->address.sin_port) {
+						//delete it2->buffer_de_salida;
 						lista_clientes_rdt.erase(it2);
 						encontre2 = true;
 					} else {
@@ -616,7 +636,7 @@ char* makepkt_multicast(bool seqNum, char* msj) {
 }
 
 void udt_send_multicast(char* msj) {
-	cout << "udt_send_multicast: " << msj << endl << endl;
+	cout << "udt_send_multicast: " << msj << "\n\n";
 	sendto(sockMulticast, msj, strlen(msj), 0, (struct sockaddr *) &servMulticAddr, sizeof (struct sockaddr_in));
 	delete [] msj;
 }
@@ -625,11 +645,11 @@ void udt_send_unicast(char* msj, const sockaddr_in& cli_addr) {
 	char* p = &msj[1];
 	cantEnviosUnicast++;
 	if ((cantEnviosUnicast > 0) && (cantEnviosUnicast % 10 == 0)) {
-		cout << "7777777 SKIPPED 7777777" << endl;
-		cout << "header: " << bitset<8>(msj[0]) << " y mensaje: " << p << endl;
+		cout << "---- SKIPPED ----\n";
+		cout << "header: " << bitset<8>(msj[0]) << " y mensaje: " << p << "\n";
 	} else {
-		cout << "udt_send_unicast header: " << bitset<8>(msj[0]) << " y mensaje: " << p << endl;
-		cout << "to: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << endl << endl;
+		cout << "udt_send_unicast header: " << bitset<8>(msj[0]) << " y mensaje: " << p << "\n\n";
+		//cout << "to: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << "\n\n";
 		sendto(sockUnicast, msj, strlen(msj), 0, (struct sockaddr *) &cli_addr, sizeof (cli_addr));
 	}
 	delete [] msj;
@@ -640,8 +660,6 @@ void rdt_send_multicast(char* msj) {
 	strcpy(ult_pkt_multicast_enviado, pkt);
 	thread t1(udt_send_multicast, pkt);
 	t1.detach();
-	thread t2(multicast_acks_checker_trigger);
-	t2.detach();
 	timer_multicast = time(NULL);
 }
 
@@ -669,6 +687,7 @@ void rdt_send_unicast(char* msj, const sockaddr_in & cli_addr, bool quitar_clien
 		cliente_ptr->estado_sender = -1;
 	} else {
 		// Actualizo el estado del cliente
+		cliente_ptr->buffer_de_salida->deposit(pkt);
 		cliente_ptr->estado_sender = (cliente_ptr->estado_sender + 1) % 4;
 	}
 
@@ -705,9 +724,11 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 					|| (hasSeqNum(msj[0], 1) && cliente_ptr->estado_sender == 3)) {
 				cliente_ptr->timer = 0;
 				cliente_ptr->estado_sender = (cliente_ptr->estado_sender + 1) % 4;
+				cliente_ptr->buffer_de_salida->fetch();
 			} else if (cliente_ptr->estado_sender == -1) {
+				cout << "Borrando usuario!!!\n";
+				//delete it->buffer_de_salida;
 				lista_clientes_rdt.erase(it);
-				cout << "Borré ususario!!!" << endl;
 			}
 		} else {
 			cout << "No es ACK" << endl;
@@ -729,14 +750,14 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 	} else if (!is_ACK(msj[0])) {
 		// Cliente nuevo.
 		// Añadir el cliente a la lista
-		cout << "Nuevo cliente" << endl;
+		cout << "*** Nuevo cliente" << endl;
 		cliente_rdt nuevo_cliente;
 		nuevo_cliente.address = cli_addr;
 		nuevo_cliente.estado_sender = 0;
 		nuevo_cliente.expected_seq_num = 1;
 		nuevo_cliente.ult_pkt_enviado = new char[MAX_PACKET_SIZE];
 		nuevo_cliente.timer = 0;
-		//nuevo_cliente.buffer_de_salida = new BoundedBuffer(1);
+		nuevo_cliente.buffer_de_salida = new BoundedBuffer(10);
 		lista_clientes_rdt.push_back(nuevo_cliente);
 
 		// Paso el mensaje a la aplicación
@@ -746,23 +767,18 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 		// En cualquier caso le contesto con un ACK y el mismo seqNum
 		thread t2(udt_send_unicast, makepkt_unicast(true, getSeqNum(seqNum), NULL), cli_addr);
 		t2.detach();
+	} else {
+		cout << "--- mensaje ignorado ---\n";
 	}
 }
 
 void rdt_rcv_multicast(char* msj, sockaddr_in cli_addr) {
-	lock_guard<mutex> lock(lista_clientes_multicast_mutex);
-	char seqNum = msj[0];
-	// Busco el cliente
-	bool encontre_cliente = false;
-	vector<cliente_multicast>::iterator it = lista_clientes_multicast.begin();
-	while (not encontre_cliente && it != lista_clientes_multicast.end()) {
-		if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
-			it->recibido = true;
-			encontre_cliente = true;
-		} else {
-			it++;
-		}
-	}
+	// Falta (mirar el rdt_rcv_unicast para una guía)
+	// Acá se tiene que actualizar la lista con el ack recibido
+	// y fijarse si ya todos respondieron.
+	// Si todos respondieron poner el timer a 0 y
+	// actualizar el seqNum_multicast = !seqNum_multicast
+	// y no se qué más
 }
 
 void udt_rcv_multicast() {
@@ -771,16 +787,9 @@ void udt_rcv_multicast() {
 	struct sockaddr_in si_cliente;
 	int slen = sizeof (si_cliente);
 
-	struct ip_mreq mreq;
-	memset(&mreq, 0, sizeof (struct ip_mreq));
-	mreq.imr_multiaddr.s_addr = inet_addr(multicastIP);
-	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-	setsockopt(sockMulticast, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof (mreq));
-
 	while (true) {
-		cout << "Waiting for MULTICAST..." << endl;
-		recvfrom(sockMulticast, buffer, MAX_PACKET_SIZE, 0, (struct sockaddr *) &si_cliente, (socklen_t *) & slen);
-		cout << "<<<<<<<<<<<<<<<< recibí >>>>>>>>>>>>>>>>>" << endl;
+		// FALTA algo como un recvfrom()
+
 		// Obtengo un puntero al comienzo del mensaje
 		char* temp = &buffer[1];
 		char* pkt = new char[strlen(temp) + 2];
@@ -807,7 +816,6 @@ void udt_rcv_unicast() {
 	int slen = sizeof (si_cliente);
 
 	while (true) {
-		cout << "Waiting for package..." << endl;
 		recvfrom(sockUnicast, buffer, MAX_PACKET_SIZE, 0, (struct sockaddr *) &si_cliente, (socklen_t *) & slen);
 		// Obtengo un puntero al comienzo del mensaje
 		char* temp = &buffer[1];
@@ -815,15 +823,14 @@ void udt_rcv_unicast() {
 
 		// Escribo el mensaje
 		for (int i = 0; i < strlen(temp) + 1; i++) {
-
 			pkt[i] = buffer[i];
 		};
 
 		// Lo termino con un fin de línea
 		pkt[strlen(temp) + 1] = 0;
-		cout << "udt_rcv_unicast header: " << bitset<8>(pkt[0]) << endl;
+		cout << "udt_rcv_unicast header: " << bitset<8>(pkt[0]) << "\n";
 		char* p = &pkt[1];
-		cout << "y data: " << p << endl << endl;
+		cout << "y data: " << p << "\n\n";
 		thread t1(rdt_rcv_unicast, pkt, si_cliente);
 		t1.detach();
 	}
@@ -835,7 +842,6 @@ void timeout_checker_unicast() {
 	for (vector<cliente_rdt>::iterator it = lista_clientes_rdt.begin(); it != lista_clientes_rdt.end(); it++) {
 		if (it->timer != 0 && difftime(now, it->timer) > TIMEOUT_RDT_UNICAST) {
 			// Re-envío
-
 			cout << "######## reenvío ########" << endl;
 			char* pkt = new char[strlen(it->ult_pkt_enviado) + 1];
 			strcpy(pkt, it->ult_pkt_enviado);
@@ -850,7 +856,6 @@ void timeout_checker_unicast() {
 
 void timeout_checker_unicast_trigger() {
 	while (true) {
-
 		usleep(500000); // 500ms
 		timeout_checker_unicast();
 	}
@@ -858,7 +863,7 @@ void timeout_checker_unicast_trigger() {
 
 void timeout_checker_multicast() {
 	time_t now = time(NULL);
-	if (difftime(now, timer_multicast) > TIMEOUT_RDT_MULTICAST) {
+	if (timer_multicast != 0 && difftime(now, timer_multicast) > TIMEOUT_RDT_MULTICAST) {
 		// Re-envío
 		char* pkt = new char[strlen(ult_pkt_multicast_enviado) + 1];
 		strcpy(pkt, ult_pkt_multicast_enviado);
@@ -872,44 +877,8 @@ void timeout_checker_multicast() {
 
 void timeout_checker_multicast_trigger() {
 	while (true) {
-
-		usleep(300000); // 300ms
-		if (timer_multicast != 0) {
-			timeout_checker_multicast();
-		}
-	}
-}
-
-void multicast_acks_checker() {
-	// Me fijo si ya tengo todos los acks
-	lock_guard<mutex> lock(lista_clientes_multicast_mutex);
-	bool todos_contestaron = true;
-	vector<cliente_multicast>::iterator it = lista_clientes_multicast.begin();
-	while (todos_contestaron && it != lista_clientes_multicast.end()) {
-		if (it->recibido = false) {
-			todos_contestaron = false;
-		} else {
-			it++;
-		}
-	}
-
-	if (todos_contestaron) {
-		timer_multicast = 0;
-		seqNum_multicast = !seqNum_multicast;
-		for (vector<cliente_multicast>::iterator it2 = lista_clientes_multicast.begin();
-				it2 != lista_clientes_multicast.end(); it2++) {
-			it2->recibido = false;
-		}
-	}
-}
-
-void multicast_acks_checker_trigger() {
-	while (true) {
-
 		usleep(500000); // 500ms
-		if (timer_multicast != 0) {
-			multicast_acks_checker();
-		}
+		timeout_checker_multicast();
 	}
 }
 
@@ -925,13 +894,13 @@ int main(int argc, char** argv) {
 	thread t1(leer_entrada);
 	t1.detach();
 
-	//	// El thread que hace ping a los clientes
-	//	thread t2(ping_clientes_trigger);
-	//	t2.detach();
-	//
-	//	// El thread que chequea si los clientes respondieron al ping
-	//	thread t3(update_clientes_trigger);
-	//	t3.detach();
+	// El thread que hace ping a los clientes
+	thread t2(ping_clientes_trigger);
+	t2.detach();
+
+	// El thread que chequea si los clientes respondieron al ping
+	thread t3(update_clientes_trigger);
+	t3.detach();
 
 	// El thread que chequea si hay que reenviar los mensajess unicast
 	thread t4(timeout_checker_unicast_trigger);
@@ -940,10 +909,6 @@ int main(int argc, char** argv) {
 	// El thread que chequea si hay que reenviar los mensajess multicast
 	//	thread t5(timeout_checker_multicast_trigger);
 	//	t5.detach();
-
-	// Loop escuchando en multicast
-	thread t5(udt_rcv_multicast);
-	t5.detach();
 
 	// Loop escuchando en unicast
 	udt_rcv_unicast();
