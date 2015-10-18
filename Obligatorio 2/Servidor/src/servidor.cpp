@@ -228,6 +228,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		t1.detach();
 
 		// Quitar al cliente de la lista
+		//		char * remitente;
 		char * remitente = new char[MAX_NICKNAME_LENGHT];
 		bool encontre = false;
 		vector<cliente>::iterator it = lista_clientes.begin();
@@ -610,6 +611,7 @@ char* makepkt_multicast(bool seqNum, char* msj) {
 
 	// Lo termino con un fin de línea
 	pkt[strlen(msj) + 1] = 0;
+	//delete [] msj;
 	return pkt;
 }
 

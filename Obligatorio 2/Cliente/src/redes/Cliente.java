@@ -10,6 +10,8 @@ import java.net.MulticastSocket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Date;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
@@ -41,6 +43,7 @@ public class Cliente extends javax.swing.JFrame {
 		initComponents();
 		// Botón 'Enviar' como predeterminado al apretar 'Enter'
 		getRootPane().setDefaultButton(jButtonEnviar);
+		bufferEnvio = new LinkedBlockingQueue(50);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -230,10 +233,14 @@ public class Cliente extends javax.swing.JFrame {
 			try {
 				//inicializo socket de login
 				socketUnicast = new DatagramSocket();
-                //inicializo el listener unicast para ya poder recibir
+				//inicializo el listener unicast para ya poder recibir
 				//respuesta del LOGIN
 				listenerUnicast = new LectorUnicast(aplicarConfiabilidad, serverIP, serverPort);
 				listenerUnicast.start();
+
+				threadEnvioUnicast = new EnvioUnicast(aplicarConfiabilidad, serverIP, serverPort, bufferEnvio);
+				threadEnvioUnicast.start();
+
 				String msj = "LOGIN " + apodo + "\0";
 				enviarMensaje(msj);
 			} catch (SocketException ex) {
@@ -270,7 +277,7 @@ public class Cliente extends javax.swing.JFrame {
 					msj = msj.concat(destinatario + " ");
 					msj = msj.concat(contenidoMsj);
 					msj = msj.concat("\0");
-                    //muestro mi propio mensaje en el chat antes de enviarlo
+					//muestro mi propio mensaje en el chat antes de enviarlo
 					//para poder seguir el hilo de la conversación
 					updateChat(apodo + " > " + destinatario + ": " + contenidoMsj, true, false);
 					enviarMensaje(msj);
@@ -286,7 +293,7 @@ public class Cliente extends javax.swing.JFrame {
 		} else {
 			JOptionPane.showMessageDialog(this, "Debe escribir un mensaje antes de tocar Enviar", "Error", JOptionPane.ERROR_MESSAGE);
 		}
-        // Limpio la línea de chatMsj pero no la de destinatario, por si se
+		// Limpio la línea de chatMsj pero no la de destinatario, por si se
 		//quiere seguir la comunicación privada
 		jTextFieldMensaje.setText(null);
     }//GEN-LAST:event_jButtonEnviarActionPerformed
@@ -318,9 +325,7 @@ public class Cliente extends javax.swing.JFrame {
     }//GEN-LAST:event_jTextFieldHostIPActionPerformed
 
 	private void enviarMensaje(String msj) {
-		deshabilitarEnvios();
-		threadEnvioUnicastActual = new EnvioUnicast(aplicarConfiabilidad, msj, serverIP, serverPort);
-		threadEnvioUnicastActual.start();
+		(new EnviarMensajeUnicast(bufferEnvio, msj)).start();
 	}
 
 	private boolean okIP(String ip) {
@@ -376,6 +381,11 @@ public class Cliente extends javax.swing.JFrame {
 	public void comunicarAlive() {
 		//hay que enviar un IS_ALIVE al server por unicast
 		String msj = "IS_ALIVE\0";
+		if (threadEnvioUnicast.isAlive()) {
+			System.out.println("El threadEnvioUnicast está vivo");
+		} else {
+			System.out.println("El threadEnvioUnicast NOO está vivo");
+		}
 		enviarMensaje(msj);
 	}
 
@@ -391,13 +401,18 @@ public class Cliente extends javax.swing.JFrame {
 	}
 
 	/**
-     * Termina la conexión del cliente con el servidor, terminando los threads,
-     * cerrando los sockets correspondientes y limpiando el área de chat
+	 * Termina la conexión del cliente con el servidor, terminando los threads,
+	 * cerrando los sockets correspondientes y limpiando el área de chat
 	 */
 	public void terminarConexion() {
+
+		conectado = false;
+
+		bufferEnvio.clear();
+
 		// cierro el socket unicast
 		socketUnicast.close();
-		
+
 		// cierro el socket multicast
 		socketMulticast.close();
 
@@ -423,7 +438,6 @@ public class Cliente extends javax.swing.JFrame {
 		// Actualizo otros
 		jLabelStatus.setText(strDesconectado);
 		jLabelStatus.setForeground(Color.RED);
-		conectado = false;
 	}
 
 	/**
@@ -454,7 +468,7 @@ public class Cliente extends javax.swing.JFrame {
 	 */
 	public void comunicarOK() {
 		try {
-            // Corro el listener
+			// Corro el listener
 			//inicializo socket multicast
 			// Fijo la dirección ip y el puerto de donde voy a escuchar los mensajes. IP 225.5.4.<nro_grupo> puerto 6789
 			multicastIP = InetAddress.getByName(strMulticastIP);
@@ -462,8 +476,6 @@ public class Cliente extends javax.swing.JFrame {
 			socketMulticast.joinGroup(multicastIP);
 			multicastThread = new LectorMulticast(aplicarConfiabilidad);
 			multicastThread.start();
-			timeoutChecker = new Timeout_checker();
-			timeoutChecker.start();
 
 			conectado = true;
 			// Deshabilito
@@ -502,20 +514,9 @@ public class Cliente extends javax.swing.JFrame {
 		} else if (estadoSender == EstadoSender.ESPERO_ACK_1) {
 			estadoSender = EstadoSender.ESPERO_DATA_0;
 		}
-		habilitarEnvios();
-	}
-
-	private void deshabilitarEnvios() {
-		jButtonDesconectar.setEnabled(false);
-		jButtonListarConectados.setEnabled(false);
-		jButtonEnviar.setEnabled(false); //deshabilito enviar
-	}
-
-	private void habilitarEnvios() {
-		if (conectado) {
-			jButtonDesconectar.setEnabled(true);
-			jButtonListarConectados.setEnabled(true);
-			jButtonEnviar.setEnabled(true); //deshabilito enviar
+		while (threadEnvioUnicast.getState() != Thread.State.WAITING);
+		synchronized (threadEnvioUnicast) {
+			threadEnvioUnicast.notify();
 		}
 	}
 
@@ -530,9 +531,14 @@ public class Cliente extends javax.swing.JFrame {
 		Cliente v = Cliente.getInstance();
 		v.setLocationRelativeTo(null);
 		v.setVisible(true);
+
+		timeoutChecker = new Timeout_checker();
+		timeoutChecker.start();
 	}
 
-	EnvioUnicast threadEnvioUnicastActual;
+	BlockingQueue<String> bufferEnvio;
+//	BufferMensajesEnviar bufferEnvio;
+	EnvioUnicast threadEnvioUnicast;
 
 	//Máquina de estados del emisor
 	public static enum EstadoSender {

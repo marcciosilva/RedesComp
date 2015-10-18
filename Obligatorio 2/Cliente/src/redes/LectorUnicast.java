@@ -75,8 +75,8 @@ public class LectorUnicast extends Thread {
 	}
 
 	/**
-     * Recibe un mensaje aplicando confiabilidad. El mensaje se comunica hacia
-     * la interfaz mediante un thread DataSend.
+	 * Recibe un mensaje aplicando confiabilidad. El mensaje se comunica hacia
+	 * la interfaz mediante un thread DataSend.
 	 *
 	 * @param in_pck
 	 * @throws IOException
@@ -88,12 +88,13 @@ public class LectorUnicast extends Thread {
 		} else {
 			if (UtilsConfiabilidad.is_ACK(in_pck)) { //acknowledge para mensaje enviado por el sender
 				System.out.println("Me llegó un ACK");
-				System.out.println(in_pck.getData()[0]);
-				if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_ACK_0
-						&& UtilsConfiabilidad.has_seq0(in_pck)
-						|| cliente.estadoSender == Cliente.EstadoSender.ESPERO_ACK_1
-						&& UtilsConfiabilidad.has_seq1(in_pck)) {
-					cliente.envioFinalizado();
+				synchronized (cliente.estadoSender) {
+					if (cliente.estadoSender == Cliente.EstadoSender.ESPERO_ACK_0
+							&& UtilsConfiabilidad.has_seq0(in_pck)
+							|| cliente.estadoSender == Cliente.EstadoSender.ESPERO_ACK_1
+							&& UtilsConfiabilidad.has_seq1(in_pck)) {
+						cliente.envioFinalizado();
+					}
 				}
 			} else {
 				if (estadoReceiver == EstadoReceiver.ESPERO_DATA_0) {
@@ -101,14 +102,13 @@ public class LectorUnicast extends Thread {
 						sndpkt = UtilsConfiabilidad.makepkt(true, 1, null, serverIP, serverPort);
 						socketUnicast.send(sndpkt);
 						System.out.println("Me llegó un mensaje con un seqNum que no esperaba");
-						System.out.println(in_pck.getData().toString());
 					} else if (UtilsConfiabilidad.has_seq0(in_pck)) {
-						String msj = UtilsConfiabilidad.extract(in_pck);
 						sndpkt = UtilsConfiabilidad.makepkt(true, 0, null, serverIP, serverPort);
 						socketUnicast.send(sndpkt);
+						String msj = UtilsConfiabilidad.extract(in_pck);
+						UtilsConfiabilidad.deliver_msj(msj);
 						estadoReceiver = EstadoReceiver.ESPERO_DATA_1;
 						System.out.println("Me llegó un mensaje con un seqNum que esperaba (0) y es: " + msj);
-						UtilsConfiabilidad.deliver_msj(msj);
 					}
 				} else if (estadoReceiver == EstadoReceiver.ESPERO_DATA_1) {
 					if (UtilsConfiabilidad.has_seq0(in_pck)) {
@@ -116,12 +116,12 @@ public class LectorUnicast extends Thread {
 						socketUnicast.send(sndpkt);
 						System.out.println("Me llegó un mensaje con un seqNum que no esperaba");
 					} else if (UtilsConfiabilidad.has_seq1(in_pck)) {
-						String msj = UtilsConfiabilidad.extract(in_pck);
 						sndpkt = UtilsConfiabilidad.makepkt(true, 1, null, serverIP, serverPort);
 						socketUnicast.send(sndpkt);
+						String msj = UtilsConfiabilidad.extract(in_pck);
+						UtilsConfiabilidad.deliver_msj(msj);
 						estadoReceiver = EstadoReceiver.ESPERO_DATA_0;
 						System.out.println("Me llegó un mensaje con un seqNum que esperaba (1) y es: " + msj);
-						UtilsConfiabilidad.deliver_msj(msj);
 					}
 				}
 			}
