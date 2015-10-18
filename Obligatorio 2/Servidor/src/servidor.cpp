@@ -147,6 +147,8 @@ void rdt_send_unicast(char* msj, const sockaddr_in& cli_addr, bool quitar_client
 
 void udt_send_multicast(char* msj);
 
+void multicast_acks_checker_trigger();
+
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% APLICACIÓN %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% //
 
 void deliver_message(char* msj, const sockaddr_in cli_addr) {
@@ -421,16 +423,16 @@ void unicastSocket_setUp() {
 
 void multicastSocket_setUp() {
 	// Creo el socket UDP
-	sockMulticast = socket(PF_INET, SOCK_DGRAM, 0);
+	sockMulticast = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockMulticast < 0) perror("Error creating socket");
 
 	memset(&servMulticAddr, 0, sizeof (struct sockaddr_in));
 	memset(&servMulticInterface, 0, sizeof (struct sockaddr_in));
 
 	// Set local interface address
-	servMulticInterface.sin_family = PF_INET;
-	servMulticInterface.sin_port = htons(0);
-	servMulticInterface.sin_addr.s_addr = htonl(INADDR_ANY);
+	servMulticInterface.sin_family = AF_INET;
+	servMulticInterface.sin_port = htons(6788);
+	servMulticInterface.sin_addr.s_addr = inet_addr(multicastIP);
 
 	// Bind socket to local interface
 	int status = bind(sockMulticast, (struct sockaddr *) &servMulticInterface, (socklen_t)sizeof (servMulticInterface));
@@ -438,9 +440,11 @@ void multicastSocket_setUp() {
 
 	// Set multicast packet TTL; default TTL is 1
 	setsockopt(sockMulticast, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof (unsigned char));
+	// Set multicast loopback
+	setsockopt(sockMulticast, IPPROTO_IP, IP_MULTICAST_LOOP, &ttl, sizeof (unsigned char));
 
 	// Set destination address
-	servMulticAddr.sin_family = PF_INET;
+	servMulticAddr.sin_family = AF_INET;
 	servMulticAddr.sin_addr.s_addr = inet_addr(multicastIP);
 	servMulticAddr.sin_port = htons(multicastPort);
 }
@@ -634,6 +638,8 @@ void rdt_send_multicast(char* msj) {
 	strcpy(ult_pkt_multicast_enviado, pkt);
 	thread t1(udt_send_multicast, pkt);
 	t1.detach();
+	thread t2(multicast_acks_checker_trigger);
+	t2.detach();
 	timer_multicast = time(NULL);
 }
 
@@ -742,12 +748,19 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 }
 
 void rdt_rcv_multicast(char* msj, sockaddr_in cli_addr) {
-	// Falta (mirar el rdt_rcv_unicast para una guía)
-	// Acá se tiene que actualizar la lista con el ack recibido
-	// y fijarse si ya todos respondieron.
-	// Si todos respondieron poner el timer a 0 y
-	// actualizar el seqNum_multicast = !seqNum_multicast
-	// y no se qué más
+	lock_guard<mutex> lock(lista_clientes_multicast_mutex);
+	char seqNum = msj[0];
+	// Busco el cliente
+	bool encontre_cliente = false;
+	vector<cliente_multicast>::iterator it = lista_clientes_multicast.begin();
+	while (not encontre_cliente && it != lista_clientes_multicast.end()) {
+		if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
+			it->recibido = true;
+			encontre_cliente = true;
+		} else {
+			it++;
+		}
+	}
 }
 
 void udt_rcv_multicast() {
@@ -756,9 +769,16 @@ void udt_rcv_multicast() {
 	struct sockaddr_in si_cliente;
 	int slen = sizeof (si_cliente);
 
-	while (true) {
-		// FALTA algo como un recvfrom()
+	struct ip_mreq mreq;
+	memset(&mreq, 0, sizeof (struct ip_mreq));
+	mreq.imr_multiaddr.s_addr = inet_addr(multicastIP);
+	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+	setsockopt(sockMulticast, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof (mreq));
 
+	while (true) {
+		cout << "Waiting for MULTICAST..." << endl;
+		recvfrom(sockMulticast, buffer, MAX_PACKET_SIZE, 0, (struct sockaddr *) &si_cliente, (socklen_t *) & slen);
+		cout << "<<<<<<<<<<<<<<<< recibí >>>>>>>>>>>>>>>>>" << endl;
 		// Obtengo un puntero al comienzo del mensaje
 		char* temp = &buffer[1];
 		char* pkt = new char[strlen(temp) + 2];
@@ -793,6 +813,7 @@ void udt_rcv_unicast() {
 
 		// Escribo el mensaje
 		for (int i = 0; i < strlen(temp) + 1; i++) {
+
 			pkt[i] = buffer[i];
 		};
 
@@ -812,6 +833,7 @@ void timeout_checker_unicast() {
 	for (vector<cliente_rdt>::iterator it = lista_clientes_rdt.begin(); it != lista_clientes_rdt.end(); it++) {
 		if (it->timer != 0 && difftime(now, it->timer) > TIMEOUT_RDT_UNICAST) {
 			// Re-envío
+
 			cout << "######## reenvío ########" << endl;
 			char* pkt = new char[strlen(it->ult_pkt_enviado) + 1];
 			strcpy(pkt, it->ult_pkt_enviado);
@@ -826,6 +848,7 @@ void timeout_checker_unicast() {
 
 void timeout_checker_unicast_trigger() {
 	while (true) {
+
 		usleep(500000); // 500ms
 		timeout_checker_unicast();
 	}
@@ -833,7 +856,7 @@ void timeout_checker_unicast_trigger() {
 
 void timeout_checker_multicast() {
 	time_t now = time(NULL);
-	if (timer_multicast != 0 && difftime(now, timer_multicast) > TIMEOUT_RDT_MULTICAST) {
+	if (difftime(now, timer_multicast) > TIMEOUT_RDT_MULTICAST) {
 		// Re-envío
 		char* pkt = new char[strlen(ult_pkt_multicast_enviado) + 1];
 		strcpy(pkt, ult_pkt_multicast_enviado);
@@ -847,8 +870,44 @@ void timeout_checker_multicast() {
 
 void timeout_checker_multicast_trigger() {
 	while (true) {
+
+		usleep(300000); // 300ms
+		if (timer_multicast != 0) {
+			timeout_checker_multicast();
+		}
+	}
+}
+
+void multicast_acks_checker() {
+	// Me fijo si ya tengo todos los acks
+	lock_guard<mutex> lock(lista_clientes_multicast_mutex);
+	bool todos_contestaron = true;
+	vector<cliente_multicast>::iterator it = lista_clientes_multicast.begin();
+	while (todos_contestaron && it != lista_clientes_multicast.end()) {
+		if (it->recibido = false) {
+			todos_contestaron = false;
+		} else {
+			it++;
+		}
+	}
+
+	if (todos_contestaron) {
+		timer_multicast = 0;
+		seqNum_multicast = !seqNum_multicast;
+		for (vector<cliente_multicast>::iterator it2 = lista_clientes_multicast.begin();
+				it2 != lista_clientes_multicast.end(); it2++) {
+			it2->recibido = false;
+		}
+	}
+}
+
+void multicast_acks_checker_trigger() {
+	while (true) {
+
 		usleep(500000); // 500ms
-		timeout_checker_multicast();
+		if (timer_multicast != 0) {
+			multicast_acks_checker();
+		}
 	}
 }
 
@@ -879,6 +938,10 @@ int main(int argc, char** argv) {
 	// El thread que chequea si hay que reenviar los mensajess multicast
 	//	thread t5(timeout_checker_multicast_trigger);
 	//	t5.detach();
+
+	// Loop escuchando en multicast
+	thread t5(udt_rcv_multicast);
+	t5.detach();
 
 	// Loop escuchando en unicast
 	udt_rcv_unicast();
