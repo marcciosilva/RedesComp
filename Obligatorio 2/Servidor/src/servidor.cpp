@@ -110,6 +110,7 @@ struct cliente_rdt {
 	bool expected_seq_num; // el seq num que espero recibir del cliente
 	char* ult_pkt_enviado;
 	BoundedBuffer* buffer_de_salida;
+	int cant_reenvios;
 };
 
 mutex lista_clientes_rdt_mutex;
@@ -205,12 +206,12 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 			nuevo_cliente.last_seen = time(NULL);
 			lista_clientes_app.push_back(nuevo_cliente);
 
-//			lista_clientes_multicast_mutex.lock();
-//			// Lo agrego a la lista multicast
-//			cliente_multicast nuevo_cliente_m;
-//			nuevo_cliente_m.address = cli_addr;
-//			lista_clientes_multicast.push_back(nuevo_cliente_m);
-//			lista_clientes_multicast_mutex.unlock();
+			//			lista_clientes_multicast_mutex.lock();
+			//			// Lo agrego a la lista multicast
+			//			cliente_multicast nuevo_cliente_m;
+			//			nuevo_cliente_m.address = cli_addr;
+			//			lista_clientes_multicast.push_back(nuevo_cliente_m);
+			//			lista_clientes_multicast_mutex.unlock();
 
 			// Envío aviso por multicast
 			string aviso = "> " + string(nick) + " está ahora en línea";
@@ -248,19 +249,19 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 			}
 		}
 
-//		lista_clientes_multicast_mutex.lock();
-//		// Quitar al cliente de la lista multicast
-//		bool encontre2 = false;
-//		vector<cliente_multicast>::iterator it2 = lista_clientes_multicast.begin();
-//		while (not encontre2 && it2 != lista_clientes_multicast.end()) {
-//			if (it2->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it2->address.sin_port == cli_addr.sin_port) {
-//				lista_clientes_multicast.erase(it2);
-//				encontre2 = true;
-//			} else {
-//				it2++;
-//			}
-//		}
-//		lista_clientes_multicast_mutex.unlock();
+		//		lista_clientes_multicast_mutex.lock();
+		//		// Quitar al cliente de la lista multicast
+		//		bool encontre2 = false;
+		//		vector<cliente_multicast>::iterator it2 = lista_clientes_multicast.begin();
+		//		while (not encontre2 && it2 != lista_clientes_multicast.end()) {
+		//			if (it2->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it2->address.sin_port == cli_addr.sin_port) {
+		//				lista_clientes_multicast.erase(it2);
+		//				encontre2 = true;
+		//			} else {
+		//				it2++;
+		//			}
+		//		}
+		//		lista_clientes_multicast_mutex.unlock();
 
 		if (encontre) {
 			// Envío aviso por multicast
@@ -459,7 +460,7 @@ void ping_clientes() {
 	lock_guard<mutex> lock(lista_clientes_app_mutex);
 	if (not lista_clientes_app.empty()) {
 		for (vector<cliente_app>::iterator it = lista_clientes_app.begin(); it != lista_clientes_app.end(); it++) {
-			
+
 			char * alive_ptr = new char [alive_str.length() + 1];
 			strcpy(alive_ptr, alive_str.c_str());
 			thread t1(rdt_send_unicast, alive_ptr, it->address, false);
@@ -494,7 +495,7 @@ void update_clientes() {
 			*resp_ptr = 0;
 			strcpy(resp_ptr, resp.c_str());
 			udt_send_unicast(resp_ptr, it->address);
-			
+
 			{
 				lista_clientes_rdt_mutex.lock();
 				// Quitar al cliente de la lista rdt
@@ -512,21 +513,21 @@ void update_clientes() {
 				lista_clientes_rdt_mutex.unlock();
 			}
 
-//			{
-//				lista_clientes_multicast_mutex.lock();
-//				// Quitar al cliente de la lista multicast
-//				bool encontre2 = false;
-//				vector<cliente_multicast>::iterator it2 = lista_clientes_multicast.begin();
-//				while (not encontre2 && it2 != lista_clientes_multicast.end()) {
-//					if (it2->address.sin_addr.s_addr == it->address.sin_addr.s_addr && it2->address.sin_port == it->address.sin_port) {
-//						lista_clientes_multicast.erase(it2);
-//						encontre2 = true;
-//					} else {
-//						it2++;
-//					}
-//				}
-//				lista_clientes_multicast_mutex.unlock();
-//			}
+			//			{
+			//				lista_clientes_multicast_mutex.lock();
+			//				// Quitar al cliente de la lista multicast
+			//				bool encontre2 = false;
+			//				vector<cliente_multicast>::iterator it2 = lista_clientes_multicast.begin();
+			//				while (not encontre2 && it2 != lista_clientes_multicast.end()) {
+			//					if (it2->address.sin_addr.s_addr == it->address.sin_addr.s_addr && it2->address.sin_port == it->address.sin_port) {
+			//						lista_clientes_multicast.erase(it2);
+			//						encontre2 = true;
+			//					} else {
+			//						it2++;
+			//					}
+			//				}
+			//				lista_clientes_multicast_mutex.unlock();
+			//			}
 
 			// Envío aviso por multicast
 			std::string aviso = "El usuario ";
@@ -683,7 +684,7 @@ void rdt_send_unicast(char* msj, const sockaddr_in & cli_addr, bool quitar_clien
 		// Actualizo el estado del cliente
 		cliente_ptr->estado_sender = (cliente_ptr->estado_sender + 1) % 4;
 	}
-	
+
 	char* p = &pkt[1];
 	cout << "rdt_send_unicast header: " << bitset<8>(pkt[0]) << " y mensaje: " << p << "\n\n";
 	cliente_ptr->timer = time(NULL);
@@ -697,7 +698,7 @@ void rdt_send_unicast(char* msj, const sockaddr_in & cli_addr, bool quitar_clien
 void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 	lock_guard<mutex> lock(lista_clientes_rdt_mutex);
 	char seqNum = msj[0];
-	
+
 	// Busco el cliente
 	bool encontre_cliente = false;
 	cliente_rdt* cliente_ptr;
@@ -720,6 +721,7 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 				cliente_ptr->timer = 0;
 				cliente_ptr->estado_sender = (cliente_ptr->estado_sender + 1) % 4;
 				cliente_ptr->buffer_de_salida->fetch();
+				cliente_ptr->cant_reenvios = 0;
 			} else if (cliente_ptr->estado_sender == -1) {
 				cout << "Borrando usuario!!!\n\n";
 				delete [] it->ult_pkt_enviado;
@@ -752,6 +754,7 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 		nuevo_cliente.ult_pkt_enviado = new char[MAX_PACKET_SIZE];
 		nuevo_cliente.timer = 0;
 		nuevo_cliente.buffer_de_salida = new BoundedBuffer(1);
+		nuevo_cliente.cant_reenvios = 0;
 		lista_clientes_rdt.push_back(nuevo_cliente);
 
 		// Paso el mensaje a la aplicación
@@ -833,17 +836,28 @@ void udt_rcv_unicast() {
 void timeout_checker_unicast() {
 	time_t now = time(NULL);
 	lock_guard<mutex> lock(lista_clientes_rdt_mutex);
-	for (vector<cliente_rdt>::iterator it = lista_clientes_rdt.begin(); it != lista_clientes_rdt.end(); it++) {
+	vector<cliente_rdt>::iterator it = lista_clientes_rdt.begin();
+	while (it != lista_clientes_rdt.end()) {
 		if (it->timer != 0 && difftime(now, it->timer) > TIMEOUT_RDT_UNICAST) {
 			// Re-envío
 			cout << "######## reenvío ########" << endl;
 			char* pkt = new char[strlen(it->ult_pkt_enviado) + 1];
 			strcpy(pkt, it->ult_pkt_enviado);
-			thread t1(udt_send_unicast, pkt, it->address);
-			t1.join();
+			it->cant_reenvios++;
+			if (it->cant_reenvios > 10) {
+				cout << "Borrando usuario!!!\n\n";
+				delete [] it->ult_pkt_enviado;
+				it = lista_clientes_rdt.erase(it);
+			} else {
+				thread t1(udt_send_unicast, pkt, it->address);
+				t1.join();
 
-			// Seteo el timer
-			it->timer = time(NULL);
+				// Seteo el timer
+				it->timer = time(NULL);
+				it++;
+			}
+		} else {
+			it++;
 		}
 	}
 }
