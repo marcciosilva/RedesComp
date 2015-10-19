@@ -31,7 +31,7 @@ using namespace std;
 #define multicastPort 6789			// Puerto al que el servidor envía por multicast
 #define TIMEOUT_RDT_UNICAST 0.3		// en segundos
 #define TIMEOUT_RDT_MULTICAST 0.3	// en segundos
-
+#define DEBUGGING false
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Buffer %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% //
 
 struct BoundedBuffer {
@@ -62,7 +62,9 @@ struct BoundedBuffer {
 	}
 
 	void deposit(char* data) {
-		cout << "Deposit- esperar: " << bool(count) << "\n";
+		if (DEBUGGING) {
+			cout << "Deposit- esperar: " << bool(count) << "\n";
+		}
 		unique_lock<mutex> l(lock);
 
 		not_full.wait(l, [this]() {
@@ -92,6 +94,7 @@ struct BoundedBuffer {
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Variables globales %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% //
 
 // Clientes a nivel de aplicación
+
 struct cliente_app {
 	char nick[MAX_NICKNAME_LENGHT];
 	sockaddr_in address;
@@ -103,6 +106,7 @@ vector<cliente_app> lista_clientes_app;
 
 
 // Clientes a nivel de rdt unicast
+
 struct cliente_rdt {
 	sockaddr_in address;
 	time_t timer; // Timestamp del último packete enviado (se utiliza para los reenvíos)
@@ -630,7 +634,9 @@ char* makepkt_unicast(bool is_ACK, bool seqNum, char* msj) {
 //}
 
 void udt_send_multicast(char* msj) {
-	cout << "udt_send_multicast: " << msj << "\n\n";
+	if (DEBUGGING) {
+		cout << "udt_send_multicast: " << msj << "\n\n";
+	};
 	sendto(sockMulticast, msj, strlen(msj), 0, (struct sockaddr *) &servMulticAddr, sizeof (struct sockaddr_in));
 	delete [] msj;
 }
@@ -638,12 +644,14 @@ void udt_send_multicast(char* msj) {
 void udt_send_unicast(char* msj, const sockaddr_in& cli_addr) {
 	char* p = &msj[1];
 	cantEnviosUnicast++;
-	if ((cantEnviosUnicast > 0) && (cantEnviosUnicast % 10 == 0)) {
+	if (DEBUGGING && (cantEnviosUnicast > 0) && (cantEnviosUnicast % 10 == 0)) {
 		cout << "---- SKIPPED ----\n";
 		cout << "header: " << bitset<8>(msj[0]) << " y mensaje: " << p << "\n";
 	} else {
-		cout << "udt_send_unicast header: " << bitset<8>(msj[0]) << " y mensaje: " << p << "\n\n";
-		//cout << "to: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << "\n\n";
+		if (DEBUGGING) {
+			cout << "udt_send_unicast header: " << bitset<8>(msj[0]) << " y mensaje: " << p << "\n\n";
+			//cout << "to: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << "\n\n";
+		}
 		sendto(sockUnicast, msj, strlen(msj), 0, (struct sockaddr *) &cli_addr, sizeof (cli_addr));
 	}
 	delete [] msj;
@@ -686,7 +694,9 @@ void rdt_send_unicast(char* msj, const sockaddr_in & cli_addr, bool quitar_clien
 	}
 
 	char* p = &pkt[1];
-	cout << "rdt_send_unicast header: " << bitset<8>(pkt[0]) << " y mensaje: " << p << "\n\n";
+	if (DEBUGGING) {
+		cout << "rdt_send_unicast header: " << bitset<8>(pkt[0]) << " y mensaje: " << p << "\n\n";
+	}
 	cliente_ptr->timer = time(NULL);
 	strcpy(cliente_ptr->ult_pkt_enviado, pkt);
 	lista_clientes_rdt_mutex.unlock();
@@ -714,7 +724,9 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 
 	if (encontre_cliente) {
 		if (is_ACK(msj[0])) {
-			cout << "Es ACK\n\n";
+			if (DEBUGGING) {
+				cout << "Es ACK\n\n";
+			}
 			// Me fijo en qué estado estoy para ese cliente y lo actualizo
 			if ((hasSeqNum(msj[0], 0) && cliente_ptr->estado_sender == 1)
 					|| (hasSeqNum(msj[0], 1) && cliente_ptr->estado_sender == 3)) {
@@ -723,12 +735,16 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 				cliente_ptr->buffer_de_salida->fetch();
 				cliente_ptr->cant_reenvios = 0;
 			} else if (cliente_ptr->estado_sender == -1) {
-				cout << "Borrando usuario!!!\n\n";
+				if (DEBUGGING) {
+					cout << "Borrando usuario!!!\n\n";
+				}
 				delete [] it->ult_pkt_enviado;
 				lista_clientes_rdt.erase(it);
 			}
 		} else {
-			cout << "Es mensaje de aplicación\n\n";
+			if (DEBUGGING) {
+				cout << "Es mensaje de aplicación\n\n";
+			}
 			// Es un mensaje nuevo de algún cliente existente
 			// Me fijo si tiene el número de seq esperado
 			if (hasSeqNum(msj[0], cliente_ptr->expected_seq_num)) {
@@ -746,7 +762,9 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 	} else if (!is_ACK(msj[0])) {
 		// Cliente nuevo.
 		// Añadir el cliente a la lista
-		cout << "*** Nuevo cliente\n\n" << endl;
+		if (DEBUGGING) {
+			cout << "*** Nuevo cliente\n\n" << endl;
+		}
 		cliente_rdt nuevo_cliente;
 		nuevo_cliente.address = cli_addr;
 		nuevo_cliente.estado_sender = 0;
@@ -765,7 +783,9 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 		thread t2(udt_send_unicast, makepkt_unicast(true, getSeqNum(seqNum), NULL), cli_addr);
 		t2.detach();
 	} else {
-		cout << "--- mensaje ignorado ---\n\n";
+		if (DEBUGGING) {
+			cout << "--- mensaje ignorado ---\n\n";
+		}
 	}
 }
 
@@ -798,9 +818,11 @@ void udt_rcv_multicast() {
 
 		// Lo termino con un fin de línea
 		pkt[strlen(temp) + 1] = 0;
-		cout << "udt_rcv_multicast header: " << bitset<8>(pkt[0]) << endl;
 		char* p = &pkt[1];
-		cout << "y data: " << p << endl << endl;
+		if (DEBUGGING) {
+			cout << "udt_rcv_multicast header: " << bitset<8>(pkt[0]) << endl;
+			cout << "y data: " << p << endl << endl;
+		}
 		thread t1(rdt_rcv_multicast, pkt, si_cliente);
 		t1.detach();
 	}
@@ -825,9 +847,11 @@ void udt_rcv_unicast() {
 
 		// Lo termino con un fin de línea
 		pkt[strlen(temp) + 1] = 0;
-		cout << "udt_rcv_unicast header: " << bitset<8>(pkt[0]) << "\n";
 		char* p = &pkt[1];
-		cout << "y data: " << p << "\n";
+		if (DEBUGGING) {
+			cout << "udt_rcv_unicast header: " << bitset<8>(pkt[0]) << "\n";
+			cout << "y data: " << p << "\n";
+		}
 		thread t1(rdt_rcv_unicast, pkt, si_cliente);
 		t1.detach();
 	}
@@ -840,12 +864,16 @@ void timeout_checker_unicast() {
 	while (it != lista_clientes_rdt.end()) {
 		if (it->timer != 0 && difftime(now, it->timer) > TIMEOUT_RDT_UNICAST) {
 			// Re-envío
-			cout << "######## reenvío ########" << endl;
+			if (DEBUGGING) {
+				cout << "######## reenvío ########" << endl;
+			}
 			char* pkt = new char[strlen(it->ult_pkt_enviado) + 1];
 			strcpy(pkt, it->ult_pkt_enviado);
 			it->cant_reenvios++;
 			if (it->cant_reenvios > 10) {
-				cout << "Borrando usuario!!!\n\n";
+				if (DEBUGGING) {
+					cout << "Borrando usuario!!!\n\n";
+				}
 				delete [] it->ult_pkt_enviado;
 				it = lista_clientes_rdt.erase(it);
 			} else {
