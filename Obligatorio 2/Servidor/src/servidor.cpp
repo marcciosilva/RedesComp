@@ -62,11 +62,11 @@ struct BoundedBuffer {
 	}
 
 	void deposit(char* data) {
+		cout << "Deposit- esperar: " << bool(count) << "\n";
 		unique_lock<mutex> l(lock);
 
 		not_full.wait(l, [this]() {
 			return count != capacity; });
-			cout << "MENSAJES EN COLA: " << count << "\n";
 		buffer[rear] = data;
 		rear = (rear + 1) % capacity;
 		++count;
@@ -89,39 +89,23 @@ struct BoundedBuffer {
 		return result;
 	}
 };
-
-/*
- void consumer(int id, BoundedBuffer& buffer){
-	for(int i = 0; i < 50; ++i){
-		int value = buffer.fetch();
-		std::cout << "Consumer " << id << " fetched " << value << std::endl;
-		std::this_thread::sleep_for(std::chrono::milliseconds(250));
-	}
-}
-
-void producer(int id, BoundedBuffer& buffer){
-	for(int i = 0; i < 75; ++i){
-		buffer.deposit(i);
-		std::cout << "Produced " << id << " produced " << i << std::endl;
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	}
-}
- */
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Variables globales %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% //
 
-struct cliente {
+// Clientes a nivel de aplicación
+struct cliente_app {
 	char nick[MAX_NICKNAME_LENGHT];
 	sockaddr_in address;
 	time_t last_seen;
-	bool puedo_enviar;
 };
 
-mutex lista_clientes_mutex;
-vector<cliente> lista_clientes;
+mutex lista_clientes_app_mutex;
+vector<cliente_app> lista_clientes_app;
 
+
+// Clientes a nivel de rdt unicast
 struct cliente_rdt {
 	sockaddr_in address;
-	time_t timer;
+	time_t timer; // Timestamp del último packete enviado (se utiliza para los reenvíos)
 	int estado_sender; // De 0 a 3
 	bool expected_seq_num; // el seq num que espero recibir del cliente
 	char* ult_pkt_enviado;
@@ -131,17 +115,17 @@ struct cliente_rdt {
 mutex lista_clientes_rdt_mutex;
 vector<cliente_rdt> lista_clientes_rdt;
 
-struct cliente_multicast {
-	sockaddr_in address;
-	bool recibido;
-};
+//struct cliente_multicast {
+//	sockaddr_in address;
+//	bool recibido;
+//};
+//
+//mutex lista_clientes_multicast_mutex;
+//vector<cliente_multicast> lista_clientes_multicast;
 
-mutex lista_clientes_multicast_mutex;
-vector<cliente_multicast> lista_clientes_multicast;
-
-bool seqNum_multicast = false; // el último número que envié
-time_t timer_multicast = 0;
-char* ult_pkt_multicast_enviado = new char[MAX_PACKET_SIZE];
+//bool seqNum_multicast = false; // el último número que envié (0 ó 1)
+//time_t timer_multicast = 0;
+//char* ult_pkt_multicast_enviado = new char[MAX_PACKET_SIZE];
 
 // Variables del socket multicast
 int sockMulticast;
@@ -170,10 +154,12 @@ void rdt_send_unicast(char* msj, const sockaddr_in& cli_addr, bool quitar_client
 
 void udt_send_multicast(char* msj);
 
+void udt_send_unicast(char* msj, const sockaddr_in& cli_addr);
+
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% APLICACIÓN %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% //
 
 void deliver_message(char* msj, const sockaddr_in cli_addr) {
-	lock_guard<mutex> lock(lista_clientes_mutex);
+	lock_guard<mutex> lock(lista_clientes_app_mutex);
 
 	// Imprime en salida standar cada vez que se recibe un mensaje como pide la letra
 	cout << "Mensaje recibido desde: " << inet_ntoa(cli_addr.sin_addr) << ":" << ntohs(cli_addr.sin_port) << endl;
@@ -187,8 +173,8 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 
 		// Verifico si ya existe un cliente con ese nick
 		bool nick_en_uso = false;
-		vector<cliente>::iterator it = lista_clientes.begin();
-		while (not nick_en_uso && it != lista_clientes.end()) {
+		vector<cliente_app>::iterator it = lista_clientes_app.begin();
+		while (not nick_en_uso && it != lista_clientes_app.end()) {
 			if (strcmp(it->nick, nick) == 0) {
 				nick_en_uso = true;
 			}
@@ -213,18 +199,18 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 			t1.detach();
 
 			// Añadir el cliente a la lista
-			cliente nuevo_cliente;
+			cliente_app nuevo_cliente;
 			strcpy(nuevo_cliente.nick, nick);
 			nuevo_cliente.address = cli_addr;
 			nuevo_cliente.last_seen = time(NULL);
-			lista_clientes.push_back(nuevo_cliente);
+			lista_clientes_app.push_back(nuevo_cliente);
 
-			lista_clientes_multicast_mutex.lock();
-			// Lo agrego a la lista multicast
-			cliente_multicast nuevo_cliente_m;
-			nuevo_cliente_m.address = cli_addr;
-			lista_clientes_multicast.push_back(nuevo_cliente_m);
-			lista_clientes_multicast_mutex.unlock();
+//			lista_clientes_multicast_mutex.lock();
+//			// Lo agrego a la lista multicast
+//			cliente_multicast nuevo_cliente_m;
+//			nuevo_cliente_m.address = cli_addr;
+//			lista_clientes_multicast.push_back(nuevo_cliente_m);
+//			lista_clientes_multicast_mutex.unlock();
 
 			// Envío aviso por multicast
 			string aviso = "> " + string(nick) + " está ahora en línea";
@@ -232,7 +218,6 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 			*aviso_ptr = 0;
 			strcpy(aviso_ptr, aviso.c_str());
 			thread t2(udt_send_multicast, aviso_ptr);
-
 			t2.detach();
 
 			cantClientes++;
@@ -252,30 +237,30 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		//		char * remitente;
 		char * remitente = new char[MAX_NICKNAME_LENGHT];
 		bool encontre = false;
-		vector<cliente>::iterator it = lista_clientes.begin();
-		while (not encontre && it != lista_clientes.end()) {
+		vector<cliente_app>::iterator it = lista_clientes_app.begin();
+		while (not encontre && it != lista_clientes_app.end()) {
 			if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
 				strcpy(remitente, it->nick);
-				lista_clientes.erase(it);
+				lista_clientes_app.erase(it);
 				encontre = true;
 			} else {
 				it++;
 			}
 		}
 
-		lista_clientes_multicast_mutex.lock();
-		// Quitar al cliente de la lista multicast
-		bool encontre2 = false;
-		vector<cliente_multicast>::iterator it2 = lista_clientes_multicast.begin();
-		while (not encontre2 && it2 != lista_clientes_multicast.end()) {
-			if (it2->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it2->address.sin_port == cli_addr.sin_port) {
-				lista_clientes_multicast.erase(it2);
-				encontre2 = true;
-			} else {
-				it2++;
-			}
-		}
-		lista_clientes_multicast_mutex.unlock();
+//		lista_clientes_multicast_mutex.lock();
+//		// Quitar al cliente de la lista multicast
+//		bool encontre2 = false;
+//		vector<cliente_multicast>::iterator it2 = lista_clientes_multicast.begin();
+//		while (not encontre2 && it2 != lista_clientes_multicast.end()) {
+//			if (it2->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it2->address.sin_port == cli_addr.sin_port) {
+//				lista_clientes_multicast.erase(it2);
+//				encontre2 = true;
+//			} else {
+//				it2++;
+//			}
+//		}
+//		lista_clientes_multicast_mutex.unlock();
 
 		if (encontre) {
 			// Envío aviso por multicast
@@ -292,8 +277,8 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 
 	} else if (strcmp(comando, "IS_ALIVE") == 0) {
 		bool encontre = false;
-		vector<cliente>::iterator it = lista_clientes.begin();
-		while (not encontre && it != lista_clientes.end()) {
+		vector<cliente_app>::iterator it = lista_clientes_app.begin();
+		while (not encontre && it != lista_clientes_app.end()) {
 			if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
 				//actualizo last seen a ahora
 				it->last_seen = time(NULL);
@@ -304,7 +289,7 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 	} else if (strcmp(comando, "GET_CONNECTED") == 0) {
 		// Enviar los nombres de los clientes conectados
 		string resp = "CONNECTED";
-		for (vector<cliente>::iterator it = lista_clientes.begin(); it != lista_clientes.end(); it++) {
+		for (vector<cliente_app>::iterator it = lista_clientes_app.begin(); it != lista_clientes_app.end(); it++) {
 			resp = resp + " " + it->nick;
 		}
 		char *resp_ptr = new char[resp.length() + 1];
@@ -324,8 +309,8 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 
 		// Busco el nickname del cliente
 		bool encontre = false;
-		vector<cliente>::iterator it = lista_clientes.begin();
-		while (not encontre && it != lista_clientes.end()) {
+		vector<cliente_app>::iterator it = lista_clientes_app.begin();
+		while (not encontre && it != lista_clientes_app.end()) {
 			if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
 				resp = resp + it->nick + " ";
 				encontre = true;
@@ -378,8 +363,8 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		char * remitente;
 		bool encontreCliente = false;
 		{
-			vector<cliente>::iterator it = lista_clientes.begin();
-			while (not encontreCliente && it != lista_clientes.end()) {
+			vector<cliente_app>::iterator it = lista_clientes_app.begin();
+			while (not encontreCliente && it != lista_clientes_app.end()) {
 				if (it->address.sin_addr.s_addr == cli_addr.sin_addr.s_addr && it->address.sin_port == cli_addr.sin_port) {
 					remitente = it->nick;
 					encontreCliente = true;
@@ -402,8 +387,8 @@ void deliver_message(char* msj, const sockaddr_in cli_addr) {
 		sockaddr_in dest_addr;
 		bool encontreDestinatario = false;
 		{
-			vector<cliente>::iterator it = lista_clientes.begin();
-			while (not encontreDestinatario && it != lista_clientes.end()) {
+			vector<cliente_app>::iterator it = lista_clientes_app.begin();
+			while (not encontreDestinatario && it != lista_clientes_app.end()) {
 				if (strcmp(it->nick, destinatario) == 0) {
 					dest_addr = it->address;
 					encontreDestinatario = true;
@@ -445,14 +430,14 @@ void unicastSocket_setUp() {
 
 void multicastSocket_setUp() {
 	// Creo el socket UDP
-	sockMulticast = socket(PF_INET, SOCK_DGRAM, 0);
+	sockMulticast = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockMulticast < 0) perror("Error creating socket");
 
 	memset(&servMulticAddr, 0, sizeof (struct sockaddr_in));
 	memset(&servMulticInterface, 0, sizeof (struct sockaddr_in));
 
 	// Set local interface address
-	servMulticInterface.sin_family = PF_INET;
+	servMulticInterface.sin_family = AF_INET;
 	servMulticInterface.sin_port = htons(0);
 	servMulticInterface.sin_addr.s_addr = htonl(INADDR_ANY);
 
@@ -464,16 +449,17 @@ void multicastSocket_setUp() {
 	setsockopt(sockMulticast, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof (unsigned char));
 
 	// Set destination address
-	servMulticAddr.sin_family = PF_INET;
+	servMulticAddr.sin_family = AF_INET;
 	servMulticAddr.sin_addr.s_addr = inet_addr(multicastIP);
 	servMulticAddr.sin_port = htons(multicastPort);
 }
 
 void ping_clientes() {
 	string alive_str = "ALIVE";
-	lock_guard<mutex> lock(lista_clientes_mutex);
-	if (not lista_clientes.empty()) {
-		for (vector<cliente>::iterator it = lista_clientes.begin(); it != lista_clientes.end(); it++) {
+	lock_guard<mutex> lock(lista_clientes_app_mutex);
+	if (not lista_clientes_app.empty()) {
+		for (vector<cliente_app>::iterator it = lista_clientes_app.begin(); it != lista_clientes_app.end(); it++) {
+			
 			char * alive_ptr = new char [alive_str.length() + 1];
 			strcpy(alive_ptr, alive_str.c_str());
 			thread t1(rdt_send_unicast, alive_ptr, it->address, false);
@@ -490,18 +476,25 @@ void ping_clientes_trigger() {
 }
 
 void update_clientes() {
-	lock_guard<mutex> lock(lista_clientes_mutex);
+	lock_guard<mutex> lock(lista_clientes_app_mutex);
 	time_t now = time(NULL);
 	bool encontre = false;
-	vector<cliente>::iterator it = lista_clientes.begin();
-	while (not encontre && it != lista_clientes.end()) {
+	vector<cliente_app>::iterator it = lista_clientes_app.begin();
+	while (not encontre && it != lista_clientes_app.end()) {
 		//si no lo vi por mas de 5 seg
-		if (difftime(now, it->last_seen) > 3) {
+		if (difftime(now, it->last_seen) > 5) {
 			// Quitar al cliente de la lista
 			char * remitente = new char[MAX_NICKNAME_LENGHT];
 			strcpy(remitente, it->nick);
 			encontre = true;
 
+			// Envío aviso al cliente
+			string resp = "GOODBYE";
+			char *resp_ptr = new char[resp.length() + 1];
+			*resp_ptr = 0;
+			strcpy(resp_ptr, resp.c_str());
+			udt_send_unicast(resp_ptr, it->address);
+			
 			{
 				lista_clientes_rdt_mutex.lock();
 				// Quitar al cliente de la lista rdt
@@ -509,7 +502,7 @@ void update_clientes() {
 				vector<cliente_rdt>::iterator it2 = lista_clientes_rdt.begin();
 				while (not encontre2 && it2 != lista_clientes_rdt.end()) {
 					if (it2->address.sin_addr.s_addr == it->address.sin_addr.s_addr && it2->address.sin_port == it->address.sin_port) {
-						//delete it2->buffer_de_salida;
+						delete [] it2->ult_pkt_enviado;
 						lista_clientes_rdt.erase(it2);
 						encontre2 = true;
 					} else {
@@ -519,21 +512,21 @@ void update_clientes() {
 				lista_clientes_rdt_mutex.unlock();
 			}
 
-			{
-				lista_clientes_multicast_mutex.lock();
-				// Quitar al cliente de la lista multicast
-				bool encontre2 = false;
-				vector<cliente_multicast>::iterator it2 = lista_clientes_multicast.begin();
-				while (not encontre2 && it2 != lista_clientes_multicast.end()) {
-					if (it2->address.sin_addr.s_addr == it->address.sin_addr.s_addr && it2->address.sin_port == it->address.sin_port) {
-						lista_clientes_multicast.erase(it2);
-						encontre2 = true;
-					} else {
-						it2++;
-					}
-				}
-				lista_clientes_multicast_mutex.unlock();
-			}
+//			{
+//				lista_clientes_multicast_mutex.lock();
+//				// Quitar al cliente de la lista multicast
+//				bool encontre2 = false;
+//				vector<cliente_multicast>::iterator it2 = lista_clientes_multicast.begin();
+//				while (not encontre2 && it2 != lista_clientes_multicast.end()) {
+//					if (it2->address.sin_addr.s_addr == it->address.sin_addr.s_addr && it2->address.sin_port == it->address.sin_port) {
+//						lista_clientes_multicast.erase(it2);
+//						encontre2 = true;
+//					} else {
+//						it2++;
+//					}
+//				}
+//				lista_clientes_multicast_mutex.unlock();
+//			}
 
 			// Envío aviso por multicast
 			std::string aviso = "El usuario ";
@@ -541,7 +534,7 @@ void update_clientes() {
 			char *aviso_ptr = new char[aviso.length() + 1];
 			*aviso_ptr = 0;
 			strcpy(aviso_ptr, aviso.c_str());
-			lista_clientes.erase(it);
+			lista_clientes_app.erase(it);
 			thread t2(udt_send_multicast, aviso_ptr);
 			t2.detach();
 			delete [] remitente;
@@ -619,21 +612,21 @@ char* makepkt_unicast(bool is_ACK, bool seqNum, char* msj) {
 	}
 }
 
-char* makepkt_multicast(bool seqNum, char* msj) {
-	char* pkt = new char[strlen(msj) + 2];
-	// Escribo el header
-	pkt[0] = seqNum | 2;
-
-	// Escribo el mensaje
-	for (int i = 0; i < strlen(msj); i++) {
-		pkt[i + 1] = msj[i];
-	};
-
-	// Lo termino con un fin de línea
-	pkt[strlen(msj) + 1] = 0;
-	//delete [] msj;
-	return pkt;
-}
+//char* makepkt_multicast(bool seqNum, char* msj) {
+//	char* pkt = new char[strlen(msj) + 2];
+//	// Escribo el header
+//	pkt[0] = seqNum | 2;
+//
+//	// Escribo el mensaje
+//	for (int i = 0; i < strlen(msj); i++) {
+//		pkt[i + 1] = msj[i];
+//	};
+//
+//	// Lo termino con un fin de línea
+//	pkt[strlen(msj) + 1] = 0;
+//	//delete [] msj;
+//	return pkt;
+//}
 
 void udt_send_multicast(char* msj) {
 	cout << "udt_send_multicast: " << msj << "\n\n";
@@ -655,17 +648,17 @@ void udt_send_unicast(char* msj, const sockaddr_in& cli_addr) {
 	delete [] msj;
 }
 
-void rdt_send_multicast(char* msj) {
-	char* pkt = makepkt_multicast(seqNum_multicast, msj);
-	strcpy(ult_pkt_multicast_enviado, pkt);
-	thread t1(udt_send_multicast, pkt);
-	t1.detach();
-	timer_multicast = time(NULL);
-}
+//void rdt_send_multicast(char* msj) {
+//	char* pkt = makepkt_multicast(seqNum_multicast, msj);
+//	strcpy(ult_pkt_multicast_enviado, pkt);
+//	thread t1(udt_send_multicast, pkt);
+//	t1.detach();
+//	timer_multicast = time(NULL);
+//}
 
 void rdt_send_unicast(char* msj, const sockaddr_in & cli_addr, bool quitar_cliente) {
 	// Busco el cliente
-	lock_guard<mutex> lock(lista_clientes_rdt_mutex);
+	lista_clientes_rdt_mutex.lock();
 	bool encontre_cliente = false;
 	cliente_rdt* cliente_ptr;
 	vector<cliente_rdt>::iterator it = lista_clientes_rdt.begin();
@@ -678,22 +671,24 @@ void rdt_send_unicast(char* msj, const sockaddr_in & cli_addr, bool quitar_clien
 		}
 	}
 
+	lista_clientes_rdt_mutex.unlock();
+	cliente_ptr->buffer_de_salida->deposit(msj);
+	lista_clientes_rdt_mutex.lock();
 	// Armo el paquete
 	char* pkt = makepkt_unicast(false, cliente_ptr->estado_sender / 2, msj);
 
-	// Pongo el mensaje en el buffer de salida
-	//    cliente_ptr->buffer_de_salida->deposit(pkt);
 	if (quitar_cliente) {
 		cliente_ptr->estado_sender = -1;
 	} else {
 		// Actualizo el estado del cliente
-		cliente_ptr->buffer_de_salida->deposit(pkt);
 		cliente_ptr->estado_sender = (cliente_ptr->estado_sender + 1) % 4;
 	}
-
+	
+	char* p = &pkt[1];
+	cout << "rdt_send_unicast header: " << bitset<8>(pkt[0]) << " y mensaje: " << p << "\n\n";
 	cliente_ptr->timer = time(NULL);
 	strcpy(cliente_ptr->ult_pkt_enviado, pkt);
-
+	lista_clientes_rdt_mutex.unlock();
 	// Envío
 	thread t1(udt_send_unicast, pkt, cli_addr);
 	t1.detach();
@@ -702,6 +697,7 @@ void rdt_send_unicast(char* msj, const sockaddr_in & cli_addr, bool quitar_clien
 void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 	lock_guard<mutex> lock(lista_clientes_rdt_mutex);
 	char seqNum = msj[0];
+	
 	// Busco el cliente
 	bool encontre_cliente = false;
 	cliente_rdt* cliente_ptr;
@@ -717,8 +713,7 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 
 	if (encontre_cliente) {
 		if (is_ACK(msj[0])) {
-			cout << "Es ACK" << endl;
-			// Es un ACK para procesar desde el sender
+			cout << "Es ACK\n\n";
 			// Me fijo en qué estado estoy para ese cliente y lo actualizo
 			if ((hasSeqNum(msj[0], 0) && cliente_ptr->estado_sender == 1)
 					|| (hasSeqNum(msj[0], 1) && cliente_ptr->estado_sender == 3)) {
@@ -726,13 +721,13 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 				cliente_ptr->estado_sender = (cliente_ptr->estado_sender + 1) % 4;
 				cliente_ptr->buffer_de_salida->fetch();
 			} else if (cliente_ptr->estado_sender == -1) {
-				cout << "Borrando usuario!!!\n";
-				//delete it->buffer_de_salida;
+				cout << "Borrando usuario!!!\n\n";
+				delete [] it->ult_pkt_enviado;
 				lista_clientes_rdt.erase(it);
 			}
 		} else {
-			cout << "No es ACK" << endl;
-			// Es un mensaje nuevo
+			cout << "Es mensaje de aplicación\n\n";
+			// Es un mensaje nuevo de algún cliente existente
 			// Me fijo si tiene el número de seq esperado
 			if (hasSeqNum(msj[0], cliente_ptr->expected_seq_num)) {
 				// Actualizo el estado del cliente
@@ -743,21 +738,20 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 				t1.detach();
 			}
 			// En cualquier caso le contesto con un ACK y el mismo seqNum
-			//salvo que haya recibido un ACK
 			thread t2(udt_send_unicast, makepkt_unicast(true, getSeqNum(seqNum), NULL), cli_addr);
 			t2.detach();
 		}
 	} else if (!is_ACK(msj[0])) {
 		// Cliente nuevo.
 		// Añadir el cliente a la lista
-		cout << "*** Nuevo cliente" << endl;
+		cout << "*** Nuevo cliente\n\n" << endl;
 		cliente_rdt nuevo_cliente;
 		nuevo_cliente.address = cli_addr;
 		nuevo_cliente.estado_sender = 0;
 		nuevo_cliente.expected_seq_num = 1;
 		nuevo_cliente.ult_pkt_enviado = new char[MAX_PACKET_SIZE];
 		nuevo_cliente.timer = 0;
-		nuevo_cliente.buffer_de_salida = new BoundedBuffer(10);
+		nuevo_cliente.buffer_de_salida = new BoundedBuffer(1);
 		lista_clientes_rdt.push_back(nuevo_cliente);
 
 		// Paso el mensaje a la aplicación
@@ -768,7 +762,7 @@ void rdt_rcv_unicast(char* msj, sockaddr_in cli_addr) {
 		thread t2(udt_send_unicast, makepkt_unicast(true, getSeqNum(seqNum), NULL), cli_addr);
 		t2.detach();
 	} else {
-		cout << "--- mensaje ignorado ---\n";
+		cout << "--- mensaje ignorado ---\n\n";
 	}
 }
 
@@ -830,7 +824,7 @@ void udt_rcv_unicast() {
 		pkt[strlen(temp) + 1] = 0;
 		cout << "udt_rcv_unicast header: " << bitset<8>(pkt[0]) << "\n";
 		char* p = &pkt[1];
-		cout << "y data: " << p << "\n\n";
+		cout << "y data: " << p << "\n";
 		thread t1(rdt_rcv_unicast, pkt, si_cliente);
 		t1.detach();
 	}
@@ -861,26 +855,26 @@ void timeout_checker_unicast_trigger() {
 	}
 }
 
-void timeout_checker_multicast() {
-	time_t now = time(NULL);
-	if (timer_multicast != 0 && difftime(now, timer_multicast) > TIMEOUT_RDT_MULTICAST) {
-		// Re-envío
-		char* pkt = new char[strlen(ult_pkt_multicast_enviado) + 1];
-		strcpy(pkt, ult_pkt_multicast_enviado);
-		thread t1(udt_send_multicast, pkt);
-		t1.join();
-
-		// Seteo el timer
-		timer_multicast = time(NULL);
-	}
-}
-
-void timeout_checker_multicast_trigger() {
-	while (true) {
-		usleep(500000); // 500ms
-		timeout_checker_multicast();
-	}
-}
+//void timeout_checker_multicast() {
+//	time_t now = time(NULL);
+//	if (timer_multicast != 0 && difftime(now, timer_multicast) > TIMEOUT_RDT_MULTICAST) {
+//		// Re-envío
+//		char* pkt = new char[strlen(ult_pkt_multicast_enviado) + 1];
+//		strcpy(pkt, ult_pkt_multicast_enviado);
+//		thread t1(udt_send_multicast, pkt);
+//		t1.join();
+//
+//		// Seteo el timer
+//		timer_multicast = time(NULL);
+//	}
+//}
+//
+//void timeout_checker_multicast_trigger() {
+//	while (true) {
+//		usleep(500000); // 500ms
+//		timeout_checker_multicast();
+//	}
+//}
 
 int main(int argc, char** argv) {
 	// Creo y configuro los sockets
