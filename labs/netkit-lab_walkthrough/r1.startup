@@ -1,0 +1,2 @@
+ifconfig eth0 192.168.0.1 netmask 255.255.255.128 up
+ifconfig eth1 10.0.0.1 netmask 255.255.255.0 up
