@@ -124,3 +124,7 @@ Release/**
 /Obligatorio 2/Cliente/Debug/
 /Obligatorio 2/Cliente/Release/
 /Obligatorio 2/Cliente/nbproject/private/
+
+
+# Netkit
+*.disk
