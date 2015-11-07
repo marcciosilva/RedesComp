@@ -1,0 +1,12 @@
+$TTL    60000
+@        IN SOA  dnsnet.redes2015.net.   root.dnsnet.redes2015.net. (
+                    2006031201 ; serial
+                    28800 ; refresh
+                    14400 ; retry
+                    3600000 ; expire
+                    0 ; negative cache ttl
+                 )
+@        IN NS   dnsnet.redes2015.net.
+dnsnet   IN  A   200.0.0.2
+
+www   IN  A   10.0.1.4
