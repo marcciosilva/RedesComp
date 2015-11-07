@@ -7,6 +7,6 @@ $TTL    60000
                     0 ; negative cache ttl
                  )
 @        IN NS   dnsnet.net.
-dnsnet   IN  A   200.0.0.101
+dnsnet   IN  A   100.0.0.2
 
-server   IN  A   200.0.0.15
+server   IN  A   10.0.1.3
