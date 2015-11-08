@@ -11,3 +11,5 @@ iptables --table nat --append PREROUTING --destination 10.0.1.3 --match statisti
 iptables --table nat --append PREROUTING --destination 10.0.1.3 --jump DNAT --to-destination 10.0.0.2
 
 echo "watch 'iptables -t nat -vnL'" >> /root/.bashrc
+
+/etc/init.d/zebra start
