@@ -9,7 +9,8 @@ redes2015.net.        IN SOA  dnsnet.redes2015.net.   root.dnsnet.redes2015.net.
 redes2015.net.        IN NS   dnsnet.redes2015.net.
 redes2015.net.        IN NS   dnsnet2.redes2015.net.
 dnsnet   IN  A   100.0.0.1
-dnsnet2  IN  A   200.0.0.2
+dnsnet   IN  A   10.0.1.1
+dnsnet2  IN  A   10.0.1.2
 
 www   IN  A   10.0.1.3
 www   IN  A   10.0.1.4
