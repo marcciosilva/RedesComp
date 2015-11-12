@@ -1,6 +1,6 @@
 $TTL    60000
 redes2015.net.        IN SOA  dnsnet.redes2015.net.   root.dnsnet.redes2015.net. (
-                    2006031201 ; serial
+                    2015111201 ; serial
                     28800 ; refresh
                     14400 ; retry
                     3600000 ; expire
