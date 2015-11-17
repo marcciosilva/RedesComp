@@ -1,0 +1,24 @@
+/sbin/ifconfig eth0 up
+/sbin/ifconfig eth1 up
+/sbin/ifconfig eth2 up
+/sbin/ifconfig eth0 hw ether 00:00:00:00:11:00
+/sbin/ifconfig eth1 hw ether 00:00:00:00:11:01
+/sbin/ifconfig eth2 hw ether 00:00:00:00:11:02
+
+vconfig add eth2 10
+vconfig add eth2 11
+
+/sbin/ifconfig eth2.10 up
+/sbin/ifconfig eth2.11 up
+
+brctl addbr br0       # creates a bridging process  called br0
+brctl addif br0 eth0  # tells br0 to switch frames from/to eth0
+brctl addif br0 eth2.10  # tells br0 to switch frames from/to eth0
+brctl stp br0 on      # enable the spanning tree protocol
+/sbin/ifconfig br0 up # starts br0
+
+brctl addbr br1       # creates a bridging process  called br0
+brctl addif br1 eth1  # tells br0 to switch frames from/to eth0
+brctl addif br1 eth2.11  # tells br0 to switch frames from/to eth0
+brctl stp br1 on      # enable the spanning tree protocol
+/sbin/ifconfig br1 up # starts br0
