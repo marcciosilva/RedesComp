@@ -1,9 +1,12 @@
 ifconfig eth0 10.0.0.5 netmask 255.255.255.0 up
 ifconfig eth1 200.0.0.3 netmask 255.255.255.0 up
 
-iptables --table nat --append POSTROUTING --destination 10.0.0.0/24 --jump MASQUERADE
+# Cambio la IP destino de los paquetes
 iptables --table nat --append PREROUTING --destination 200.0.0.3 --match statistic --mode nth --every 2 --jump DNAT --to-destination 10.0.0.11
 iptables --table nat --append PREROUTING --destination 200.0.0.3 --jump DNAT --to-destination 10.0.0.12
+
+# Cambio la IP origen de los paquetes que llegan con destino a la red 10.0.0.0/24
+iptables --table nat --append POSTROUTING --destination 10.0.0.0/24 --jump MASQUERADE
 
 echo "watch 'iptables -t nat -vnL'" >> /root/.bashrc
 

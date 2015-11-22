@@ -1,13 +1,12 @@
-$TTL    60000
-redes2015.net.        IN SOA  dnsnet.redes2015.net.   root.dnsnet.redes2015.net. (
+redes2015.net.   IN SOA  dnsnet.redes2015.net.   root.dnsnet.redes2015.net. (
                     2015111201 ; serial
                     28800 ; refresh
                     14400 ; retry
                     3600000 ; expire
                     0 ; negative cache ttl
                  )
-redes2015.net.        IN NS   dnsnet.redes2015.net.
-redes2015.net.        IN NS   dnsnet2.redes2015.net.
+redes2015.net.   IN NS   dnsnet.redes2015.net.
+redes2015.net.   IN NS   dnsnet2.redes2015.net.
 dnsnet   IN  A   11.0.0.1
 dnsnet2  IN  A   11.0.0.5
 
