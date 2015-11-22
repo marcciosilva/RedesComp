@@ -1,0 +1,10 @@
+ifconfig eth0 10.0.0.5 netmask 255.255.255.0 up
+ifconfig eth1 200.0.0.3 netmask 255.255.255.0 up
+
+iptables --table nat --append POSTROUTING --destination 10.0.0.0/24 --jump MASQUERADE
+iptables --table nat --append PREROUTING --destination 200.0.0.3 --match statistic --mode nth --every 2 --jump DNAT --to-destination 10.0.0.11
+iptables --table nat --append PREROUTING --destination 200.0.0.3 --jump DNAT --to-destination 10.0.0.12
+
+echo "watch 'iptables -t nat -vnL'" >> /root/.bashrc
+
+/etc/init.d/zebra start

@@ -1,0 +1,7 @@
+ifconfig eth0 11.0.0.6 netmask 255.255.255.252 up
+ifconfig eth1 11.0.0.10 netmask 255.255.255.252 up
+ifconfig eth2 173.0.0.1 netmask 255.255.255.0 up
+
+# route add default gw 11.0.0.5 dev eth0
+
+/etc/init.d/zebra start
