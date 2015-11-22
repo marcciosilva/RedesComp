@@ -21,17 +21,17 @@ vconfig add eth0 200
 /sbin/ifconfig eth0.10 up
 /sbin/ifconfig eth0.200 up
 
-brctl addbr br0       		# creates a bridging process called br0
-brctl addif br0 eth0.10  	# tells br0 to switch frames from/to eth0.10
-brctl addif br0 eth1  		# tells br0 to switch frames from/to eth1
-brctl addif br0 eth4.10 	# tells br0 to switch frames from/to eth4.10
-brctl stp br0 on      		# enable the spanning tree protocol
-/sbin/ifconfig br0 up 		# starts br0
+brctl addbr br0       		# crea el proceso de bridging br0
+brctl addif br0 eth0.10  	# indica a br0 que reenvie paquetes desde/hacia eth0.10
+brctl addif br0 eth1  		# indica a br0 que reenvie paquetes desde/hacia eth1
+brctl addif br0 eth4.10 	# indica a br0 que reenvie paquetes desde/hacia eth4.10
+brctl stp br0 on      		# habilita el protocolo de árbol de cubrimiento (spanning tree)
+/sbin/ifconfig br0 up 		# lanza br0
 
-brctl addbr br1      		# creates a bridging process  called br1
-brctl addif br1 eth0.200  	# tells br1 to switch frames from/to eth0.200
-brctl addif br1 eth2  		# tells br1 to switch frames from/to eth2
-brctl addif br1 eth3  		# tells br1 to switch frames from/to eth3
-brctl addif br1 eth4.200  	# tells br1 to switch frames from/to eth4.200
-brctl stp br1 on      		# enable the spanning tree protocol
-/sbin/ifconfig br1 up 		# starts br1
+brctl addbr br1      		# crea el proceso de bridging br1
+brctl addif br1 eth0.200  	# indica a br1 que reenvie paquetes desde/hacia eth0.200
+brctl addif br1 eth2  		# indica a br1 que reenvie paquetes desde/hacia eth2
+brctl addif br1 eth3  		# indica a br1 que reenvie paquetes desde/hacia eth3
+brctl addif br1 eth4.200  	# indica a br1 que reenvie paquetes desde/hacia eth4.200
+brctl stp br1 on      		# habilita el protocolo de árbol de cubrimiento (spanning tree)
+/sbin/ifconfig br1 up 		# lanza br1
